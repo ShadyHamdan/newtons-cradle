@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Newton Cradle Pro</title>
+  <link rel="stylesheet" href="src/css/style.css">
+</head>
+<body>
+  <div class="launch-panel">
+    <div class="launch-title">إعدادات الانطلاق</div>
+    <div class="mode-buttons">
+      <button class="mode-btn active" id="singleSideBtn" type="button">جهة واحدة</button>
+      <button class="mode-btn" id="doubleSideBtn" type="button">جهتين</button>
+    </div>
+
+    <div class="group">
+      <label><span id="launchCountValue">1</span> عدد الكرات</label>
+      <input id="launchCountInput" type="range" min="1" max="5" step="1" value="1" />
+    </div>
+
+    <div class="group">
+      <label><span id="launchAngleValue">45</span> زاوية الرفع</label>
+      <input id="launchAngleInput" type="range" min="5" max="80" step="1" value="45" />
+    </div>
+
+    <div class="group">
+      <label>زاوية الانحراف نحو Z (بالدرجات):</label>
+      <input type="range" id="launchAngleZInput" min="-90" max="90" value="0" />
+      <span id="launchAngleZValue">0°</span>
+    </div>
+
+    <div class="group toggle">
+      <label for="enableZDrag" style="margin-bottom: 0;">تفعيل السحب على المحور Z</label>
+      <input type="checkbox" id="enableZDrag" />
+    </div>
+
+    <button class="launch-action" id="launchBtn" type="button">إطلاق الكرات</button>
+  </div>
+
+  <div id="controlPanel" class="panel">
+    <h2>Newton Cradle Pro</h2>
+
+    <div class="control-group">
+      <label for="planet-select">اختر الكوكب/البيئة:</label>
+      <select id="planet-select" class="ui-select">
+        <option value="earth" selected>الأرض (9.81 m/s²)</option>
+        <option value="moon">القمر (1.62 m/s²)</option>
+        <option value="mars">المريخ (3.71 m/s²)</option>
+        <option value="jupiter">المشتري (24.79 m/s²)</option>
+        <option value="mercury">عطارد (3.70 m/s²)</option>
+        <option value="venus">الزهرة (8.87 m/s²)</option>
+        <option value="saturn">زحل (10.44 m/s²)</option>
+        <option value="uranus">أورانوس (8.69 m/s²)</option>
+        <option value="neptune">نبتون (11.15 m/s²)</option>
+        <option value="custom">مخصص</option>
+      </select>
+    </div>
+
+    <div class="group">
+      <label><span id="gravityValue">9.81</span> الجاذبية</label>
+      <input id="gravityInput" type="range" min="1" max="30" step="0.1" value="9.81" />
+    </div>
+
+    <div class="group">
+      <label><span id="dampingValue">0.0006</span> مقاومة الهواء</label>
+      <input id="dampingInput" type="range" min="0" max="0.05" step="0.0001" value="0.0006" />
+    </div>
+
+    <div class="separator">
+      <div class="separator-title">التحكم المتقدم بالكرات</div>
+      <div class="mode-buttons" style="margin-bottom: 12px;">
+        <button class="mode-btn active" id="allBallsModeBtn" type="button">الكل معاً</button>
+        <button class="mode-btn" id="singleBallModeBtn" type="button">تخصيص كرة</button>
+      </div>
+
+      <div class="group" id="ballSelectGroup" style="opacity: 0.5; pointer-events: none; transition: opacity 0.2s;">
+        <label>اختر الكرة لتعديلها</label>
+        <select id="ballSelect">
+          <option value="0">الكرة 1 (الأولى من اليسار)</option>
+          <option value="1">الكرة 2</option>
+          <option value="2">الكرة 3 (الوسطى)</option>
+          <option value="3">الكرة 4</option>
+          <option value="4">الكرة 5 (الأخيرة من اليمين)</option>
+        </select>
+      </div>
+
+      <div class="group">
+        <label>مادة الكرة:</label>
+        <select id="materialSelect">
+          <option value="0.98" selected>فولاذ</option>
+          <option value="0.92">زجاج</option>
+          <option value="0.80">مطاط</option>
+          <option value="0.50">خشب</option>
+          <option value="custom">مخصص</option>
+        </select>
+      </div>
+
+      <div class="group" id="customRestitutionGroup" style="display: none;">
+        <label><span id="restitutionValue">0.980</span> معامل الارتداد الدقيق</label>
+        <input id="restitutionInput" type="range" min="0.1" max="1" step="0.001" value="0.98" />
+      </div>
+
+      <div class="group">
+        <label><span id="lengthValue">5.0</span> طول الخيط</label>
+        <input id="lengthInput" type="range" min="2" max="6" step="0.1" value="5" />
+      </div>
+
+      <div class="group">
+        <label><span id="massValue">1.0</span> الكتلة</label>
+        <input id="massInput" type="range" min="0.1" max="10" step="0.1" value="1" />
+      </div>
+
+      <div class="group">
+        <label>طريقة التعليق:</label>
+        <select id="wireSelect">
+          <option value="2">خيطين (V)</option>
+          <option value="1">خيط واحد</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="group toggle">
+      <label for="soundToggle" style="margin-bottom: 0;">تفعيل المؤثرات الصوتية</label>
+      <input id="soundToggle" type="checkbox" checked />
+    </div>
+
+    <div class="buttons">
+      <button class="apply" id="applyBtn" type="button">تطبيق التغييرات</button>
+      <button class="reset" id="resetBtn" type="button">إعادة ضبط</button>
+    </div>
+  </div>
+
+  <script type="module" src="./src/JS/main.js"></script>
+</body>
+</html>
