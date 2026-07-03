@@ -1,28 +1,20 @@
 // /physics/PhysicsRope.js
 
 export class PhysicsRope {
-    /**
-     * @param {Object} startPos - المتجه الابتدائي لنقطة التثبيت {x, y, z}
-     * @param {Object} endPos - المتجه الابتدائي لنقطة النهاية (موقع الكرة) {x, y, z}
-     * @param {Object} options - إعدادات الحبل الفيزيائية
-     */
     constructor(startPos, endPos, options = {}) {
-    this.numNodes = options.numNodes || 15;
-    this.ropeLength = options.ropeLength || 5.0;
-    this.ropeNodeMass = options.ropeNodeMass || 0.1;
-    this.ballNodeMass = options.ballNodeMass || 15.0;
-        // إعدادات المحاكاة الفيزيائية للحبل (Verlet Integration)
+        this.numNodes = options.numNodes || 15;
+        this.ropeLength = options.ropeLength || 5.0;
+        this.ropeNodeMass = options.ropeNodeMass || 0.1;
+        this.ballNodeMass = options.ballNodeMass || 15.0;
         this.gravity = options.gravity !== undefined ? options.gravity : -9.81;
-        // تقليل قيمة damping (أقرب للصفر = تخميد أقوى) يمتص الطاقة الزائدة بسرعة أكبر
-        // فيمنع اهتزاز الحبل العشوائي المستمر بعد كل صدمة أو حركة، بدلاً من القيمة القديمة
-        // (0.995) التي كانت تسمح للطاقة بالبقاء في النظام لفترة طويلة جداً (مظهر "مرتخي")
         this.damping = options.damping !== undefined ? options.damping : 0.9;
-        this.constraintIterations = options.constraintIterations || 5; // عدد التكرارات لحل مرونة وشد الحبل
-
-        // قوة قيود "مقاومة الانحناء" (Bending Stiffness): تربط كل عقدة بالعقدة التي تليها بعقدتين
-        // بدلاً من عقدة واحدة فقط، فتمنع الحبل من التموّج بشكل حر (S-Curve) بين نقطتي التثبيت
-        // وتجعله يحافظ على استقامة شبه صلبة تحاكي خيط بندول نيوتن الحقيقي المشدود
+        this.constraintIterations = options.constraintIterations || 5;
         this.bendStiffness = options.bendStiffness !== undefined ? options.bendStiffness : 0.85;
+
+        // === إعدادات التصادم الجديدة ===
+        this.ropeCollisionRadius = options.ropeCollisionRadius || 0.015;
+        this.ropeRestitution = options.ropeRestitution || 0.4;
+        this.enableSelfCollision = options.enableSelfCollision !== undefined ? options.enableSelfCollision : false;
 
         this.startPoint = startPos.clone();
         this.endPoint = endPos.clone();
@@ -31,6 +23,9 @@ export class PhysicsRope {
         this.nodes = [];
         this.constraints = [];
         this.bendConstraints = [];
+
+        // قائمة التصادمات الخارجية (تُملأ من PhysicsEngine)
+        this.externalColliders = []; // { type: 'rope'|'pillar'|'beam', nodes: []|pillar|beam }
 
         this.initNodes(startPos, endPos);
     }
@@ -42,8 +37,6 @@ export class PhysicsRope {
 
         for (let i = 0; i < this.numNodes; i++) {
             const t = i / (this.numNodes - 1);
-
-            // توزيع العقد خطياً بين البداية والنهاية
             const x = startPos.x + (endPos.x - startPos.x) * t;
             const y = startPos.y + (endPos.y - startPos.y) * t;
             const z = startPos.z + (endPos.z - startPos.z) * t;
@@ -65,8 +58,6 @@ export class PhysicsRope {
             });
         }
 
-        // قيود الانحناء (Bend Constraints): تربط كل عقدة بالعقدة i+2 بطول يساوي ضعف المسافة الأصلية
-        // هذا يمنع الحبل من الانطواء محلياً بشكل مبالغ فيه ويعطيه إحساس "الصلابة" المطلوب
         for (let i = 0; i < this.numNodes - 2; i++) {
             this.bendConstraints.push({
                 nodeA: this.nodes[i],
@@ -76,117 +67,324 @@ export class PhysicsRope {
         }
     }
 
-    /**
-     * الدالة الأساسية لتحديث حركة الحبل ميكانيكياً (يجب استدعاؤها في كل إطار Frame في الـ Game Loop)
-     * @param {number} dt - فارق التوقيت (Time Step) مثل 0.016 لـ 60 إطار بالثانية
-     */
+    // === دالة جديدة: إضافة مصادم خارجي ===
+    addExternalCollider(type, data) {
+        this.externalColliders.push({ type, data });
+    }
+
+    clearExternalColliders() {
+        this.externalColliders = [];
+    }
+
     update(dt) {
         if (dt <= 0) return;
 
-        // تجميعة قوى الجاذبية المؤثرة على كل عقدة بشكل مستقل
         const gravityStep = this.gravity * dt * dt;
 
-        // 1. مرحلة التكامل الرياضي (Verlet Integration) حساب الحركة والسرعة من فروق المواقع
+        // 1. Verlet Integration
         for (let i = 0; i < this.numNodes; i++) {
             const node = this.nodes[i];
+            if (node.isPinned) continue;
 
-            if (node.isPinned) continue; // نقطة التثبيت العلوية لا تتحرك بالجاذبية
-
-            // حساب السرعة الحالية بناءً على الموقع السابق والتعجيل
             const vx = (node.position.x - node.oldPosition.x) * this.damping;
             const vy = (node.position.y - node.oldPosition.y) * this.damping;
             const vz = (node.position.z - node.oldPosition.z) * this.damping;
 
-            // حفظ الموقع الحالي ليصبح هو الموقع القديم للإطار القادم
             node.oldPosition.x = node.position.x;
             node.oldPosition.y = node.position.y;
             node.oldPosition.z = node.position.z;
 
-            // تطبيق الحركة والجاذبية في الموقع الجديد
             node.position.x += vx;
             node.position.y += vy + gravityStep;
             node.position.z += vz;
         }
 
-        // 2. مرحلة حل القيود (Solve Constraints) للحفاظ على مسافات الحبل ثابتة ومنع تمدده كالمطاط
+        // 2. حل القيود + التصادمات معاً (متكرر)
         for (let iteration = 0; iteration < this.constraintIterations; iteration++) {
-            for (let i = 0; i < this.constraints.length; i++) {
-                const constraint = this.constraints[i];
-                const nodeA = constraint.nodeA;
-                const nodeB = constraint.nodeB;
+            // 2أ. قيود الطول الأساسية
+            this.solveLengthConstraints();
+            
+            // 2ب. قيود الانحناء
+            this.solveBendConstraints();
+            
+            // 2ج. قيود التصادم الخارجية (الجديد!)
+            this.solveExternalCollisions();
+            
+            // 2د. تصادم الحبل مع نفسه (اختياري)
+            if (this.enableSelfCollision) {
+                this.solveSelfCollision();
+            }
+        }
+    }
 
-                // حساب المسافة الحالية بين العقدتين المتتاليتين
-                const dx = nodeB.position.x - nodeA.position.x;
-                const dy = nodeB.position.y - nodeA.position.y;
-                const dz = nodeB.position.z - nodeA.position.z;
-                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.001;
+    solveLengthConstraints() {
+        for (let i = 0; i < this.constraints.length; i++) {
+            const constraint = this.constraints[i];
+            const nodeA = constraint.nodeA;
+            const nodeB = constraint.nodeB;
 
-                // نسبة الخطأ والتداخل مقارنة بالطول المسموح به
-                const diff = constraint.length - dist;
-                const percent = (diff / dist) * 0.5; // كل عقدة تتحرك نصف المسافة لإصلاح الخطأ متزناً
+            const dx = nodeB.position.x - nodeA.position.x;
+            const dy = nodeB.position.y - nodeA.position.y;
+            const dz = nodeB.position.z - nodeA.position.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.001;
 
-                const offsetX = dx * percent;
-                const offsetY = dy * percent;
-                const offsetZ = dz * percent;
+            const diff = constraint.length - dist;
+            const percent = (diff / dist) * 0.5;
 
-                // دفع العقدتين لإصلاح التمدد (إلا إذا كانت العقدة مثبتة)
-                if (!nodeA.isPinned) {
-                    nodeA.position.x -= offsetX;
-                    nodeA.position.y -= offsetY;
-                    nodeA.position.z -= offsetZ;
-                }
-                if (!nodeB.isPinned) {
-                    nodeB.position.x += offsetX;
-                    nodeB.position.y += offsetY;
-                    nodeB.position.z += offsetZ;
-                }
+            const offsetX = dx * percent;
+            const offsetY = dy * percent;
+            const offsetZ = dz * percent;
+
+            if (!nodeA.isPinned) {
+                nodeA.position.x -= offsetX;
+                nodeA.position.y -= offsetY;
+                nodeA.position.z -= offsetZ;
+            }
+            if (!nodeB.isPinned) {
+                nodeB.position.x += offsetX;
+                nodeB.position.y += offsetY;
+                nodeB.position.z += offsetZ;
+            }
+        }
+    }
+
+    solveBendConstraints() {
+        for (let i = 0; i < this.bendConstraints.length; i++) {
+            const constraint = this.bendConstraints[i];
+            const nodeA = constraint.nodeA;
+            const nodeB = constraint.nodeB;
+
+            const dx = nodeB.position.x - nodeA.position.x;
+            const dy = nodeB.position.y - nodeA.position.y;
+            const dz = nodeB.position.z - nodeA.position.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.001;
+
+            const diff = constraint.length - dist;
+            const percent = (diff / dist) * 0.5 * this.bendStiffness;
+
+            const offsetX = dx * percent;
+            const offsetY = dy * percent;
+            const offsetZ = dz * percent;
+
+            if (!nodeA.isPinned) {
+                nodeA.position.x -= offsetX;
+                nodeA.position.y -= offsetY;
+                nodeA.position.z -= offsetZ;
+            }
+            if (!nodeB.isPinned) {
+                nodeB.position.x += offsetX;
+                nodeB.position.y += offsetY;
+                nodeB.position.z += offsetZ;
+            }
+        }
+    }
+
+    // === دالة جديدة: حل التصادم مع العواميد والقضبان ===
+    solveExternalCollisions() {
+        for (const collider of this.externalColliders) {
+            if (collider.type === 'pillar') {
+                this.solvePillarCollision(collider.data);
+            } else if (collider.type === 'beam') {
+                this.solveBeamCollision(collider.data);
+            } else if (collider.type === 'rope') {
+                this.solveRopeCollision(collider.data);
+            }
+        }
+    }
+
+    solvePillarCollision(pillar) {
+        const minY = pillar.yMin;
+        const maxY = pillar.yMax;
+        const radius = pillar.radius + this.ropeCollisionRadius;
+        const radiusSq = radius * radius;
+
+        for (let i = 1; i < this.numNodes - 1; i++) {
+            const node = this.nodes[i];
+            if (node.position.y < minY || node.position.y > maxY) continue;
+
+            const dx = node.position.x - pillar.x;
+            const dz = node.position.z - pillar.z;
+            const distSq = dx * dx + dz * dz;
+
+            if (distSq >= radiusSq) continue;
+
+            const dist = Math.sqrt(distSq) || 0.0001;
+            const penetration = radius - dist;
+
+            // دفع العقدة خارج العامود
+            const nx = dx / dist;
+            const nz = dz / dist;
+
+            if (!node.isPinned) {
+                node.position.x += nx * penetration;
+                node.position.z += nz * penetration;
             }
 
-            // 2ب. حل قيود الانحناء (Bend Constraints) بنسبة تصحيح جزئية (bendStiffness)
-            // هذا يمنح الحبل صلابة إضافية ضد التموّج المحلي دون تحويله لقضيب صلب بالكامل
-            for (let i = 0; i < this.bendConstraints.length; i++) {
-                const constraint = this.bendConstraints[i];
-                const nodeA = constraint.nodeA;
-                const nodeB = constraint.nodeB;
+            // ارتداد: تعديل oldPosition لمحاكاة الارتداد
+            const restitution = this.ropeRestitution;
+            const velX = node.position.x - node.oldPosition.x;
+            const velZ = node.position.z - node.oldPosition.z;
+            const vDotN = velX * nx + velZ * nz;
 
-                const dx = nodeB.position.x - nodeA.position.x;
-                const dy = nodeB.position.y - nodeA.position.y;
-                const dz = nodeB.position.z - nodeA.position.z;
-                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.001;
+            if (vDotN < 0) {
+                const impulse = -(1 + restitution) * vDotN;
+                node.oldPosition.x -= impulse * nx;
+                node.oldPosition.z -= impulse * nz;
+            }
+        }
+    }
 
-                const diff = constraint.length - dist;
-                const percent = (diff / dist) * 0.5 * this.bendStiffness;
+    solveBeamCollision(beam) {
+        const halfWidth = beam.halfWidth;
+        const halfY = beam.halfHeight + this.ropeCollisionRadius;
+        const halfZ = beam.halfDepth + this.ropeCollisionRadius;
 
-                const offsetX = dx * percent;
-                const offsetY = dy * percent;
-                const offsetZ = dz * percent;
+        for (let i = 1; i < this.numNodes - 1; i++) {
+            const node = this.nodes[i];
+            if (Math.abs(node.position.x) > halfWidth + this.ropeCollisionRadius) continue;
 
-                if (!nodeA.isPinned) {
-                    nodeA.position.x -= offsetX;
-                    nodeA.position.y -= offsetY;
-                    nodeA.position.z -= offsetZ;
-                }
-                if (!nodeB.isPinned) {
-                    nodeB.position.x += offsetX;
-                    nodeB.position.y += offsetY;
-                    nodeB.position.z += offsetZ;
+            const dy = node.position.y - beam.y;
+            const dz = node.position.z - beam.z;
+
+            if (Math.abs(dy) > halfY || Math.abs(dz) > halfZ) continue;
+
+            const penY = halfY - Math.abs(dy);
+            const penZ = halfZ - Math.abs(dz);
+
+            if (!node.isPinned) {
+                if (penY < penZ) {
+                    node.position.y += Math.sign(dy || 1) * penY;
+                    
+                    // ارتداد
+                    const velY = node.position.y - node.oldPosition.y;
+                    if (velY * Math.sign(dy || 1) < 0) {
+                        node.oldPosition.y -= (1 + this.ropeRestitution) * velY;
+                    }
+                } else {
+                    node.position.z += Math.sign(dz || 1) * penZ;
+                    
+                    // ارتداد
+                    const velZ = node.position.z - node.oldPosition.z;
+                    if (velZ * Math.sign(dz || 1) < 0) {
+                        node.oldPosition.z -= (1 + this.ropeRestitution) * velZ;
+                    }
                 }
             }
         }
     }
 
-    /**
-     * دالة لتحديث طول الحبل ديناميكياً من الـ UI
-     * @param {number} newLength - الطول الجديد القادم من الواجهة
-     * @param {Object} currentStartPos - الموضع الحالي لنقطة التثبيت
-     * @param {Object} currentEndPos - الموضع الجديد المفترض للكرة بناءً على الطول الجديد
-     */
+    // === دالة جديدة: تصادم حبل-حبل مدمج ===
+    solveRopeCollision(otherRope) {
+        const minDistance = this.ropeCollisionRadius * 2 + 0.005;
+        const minDistSq = minDistance * minDistance;
+
+        for (let i = 1; i < this.numNodes - 1; i++) {
+            const nodeA = this.nodes[i];
+            if (nodeA.isPinned) continue;
+
+            for (let j = 1; j < otherRope.numNodes - 1; j++) {
+                const nodeB = otherRope.nodes[j];
+                if (nodeB.isPinned) continue;
+
+                const dx = nodeB.position.x - nodeA.position.x;
+                const dy = nodeB.position.y - nodeA.position.y;
+                const dz = nodeB.position.z - nodeA.position.z;
+                const distSq = dx * dx + dy * dy + dz * dz;
+
+                if (distSq >= minDistSq || distSq < 1e-10) continue;
+
+                const dist = Math.sqrt(distSq);
+                const penetration = minDistance - dist;
+                const nx = dx / dist;
+                const ny = dy / dist;
+                const nz = dz / dist;
+
+                // دفع متماثل
+                const push = penetration * 0.5;
+                nodeA.position.x -= nx * push;
+                nodeA.position.y -= ny * push;
+                nodeA.position.z -= nz * push;
+
+                nodeB.position.x += nx * push;
+                nodeB.position.y += ny * push;
+                nodeB.position.z += nz * push;
+
+                // ارتداد متبادل
+                const velAx = nodeA.position.x - nodeA.oldPosition.x;
+                const velAy = nodeA.position.y - nodeA.oldPosition.y;
+                const velAz = nodeA.position.z - nodeA.oldPosition.z;
+
+                const velBx = nodeB.position.x - nodeB.oldPosition.x;
+                const velBy = nodeB.position.y - nodeB.oldPosition.y;
+                const velBz = nodeB.position.z - nodeB.oldPosition.z;
+
+                const relVx = velAx - velBx;
+                const relVy = velAy - velBy;
+                const relVz = velAz - velBz;
+
+                const relativeNormalVel = relVx * nx + relVy * ny + relVz * nz;
+
+                if (relativeNormalVel > 0.001) {
+                    const restitution = 0.5;
+                    const mA = nodeA.mass || 0.1;
+                    const mB = nodeB.mass || 0.1;
+
+                    const impulse = ((1 + restitution) * relativeNormalVel) / ((1 / mA) + (1 / mB));
+
+                    nodeA.oldPosition.x -= (impulse / mA) * nx;
+                    nodeA.oldPosition.y -= (impulse / mA) * ny;
+                    nodeA.oldPosition.z -= (impulse / mA) * nz;
+
+                    nodeB.oldPosition.x += (impulse / mB) * nx;
+                    nodeB.oldPosition.y += (impulse / mB) * ny;
+                    nodeB.oldPosition.z += (impulse / mB) * nz;
+                }
+            }
+        }
+    }
+
+    // === دالة جديدة: تصادم الحبل مع نفسه (منع التشابك) ===
+    solveSelfCollision() {
+        const minDistance = this.ropeCollisionRadius * 4; // مسافة أكبر للتجنب الذاتي
+        const minDistSq = minDistance * minDistance;
+
+        for (let i = 1; i < this.numNodes - 3; i++) {
+            const nodeA = this.nodes[i];
+            if (nodeA.isPinned) continue;
+
+            for (let j = i + 3; j < this.numNodes - 1; j++) {
+                const nodeB = this.nodes[j];
+                if (nodeB.isPinned) continue;
+
+                const dx = nodeB.position.x - nodeA.position.x;
+                const dy = nodeB.position.y - nodeA.position.y;
+                const dz = nodeB.position.z - nodeA.position.z;
+                const distSq = dx * dx + dy * dy + dz * dz;
+
+                if (distSq >= minDistSq || distSq < 1e-10) continue;
+
+                const dist = Math.sqrt(distSq);
+                const penetration = minDistance - dist;
+                const nx = dx / dist;
+                const ny = dy / dist;
+                const nz = dz / dist;
+
+                const push = penetration * 0.5;
+                nodeA.position.x -= nx * push;
+                nodeA.position.y -= ny * push;
+                nodeA.position.z -= nz * push;
+
+                nodeB.position.x += nx * push;
+                nodeB.position.y += ny * push;
+                nodeB.position.z += nz * push;
+            }
+        }
+    }
+
     updateLength(newLength, currentStartPos, currentEndPos) {
         this.ropeLength = newLength;
-        // 1. إعادة حساب المسافة الفاصلة الجديدة بين العقد
         this.restLength = this.ropeLength / (this.numNodes - 1);
 
-        // 2. تحديث نقطة البداية والنهاية فقط للحفاظ على التثبيت
         if (this.nodes[0]) {
             this.nodes[0].position.x = currentStartPos.x;
             this.nodes[0].position.y = currentStartPos.y;
@@ -200,12 +398,10 @@ export class PhysicsRope {
             endNode.position.z = currentEndPos.z;
         }
 
-        // 3. تحديث أطوال القيود (Constraints) فقط دون إجبار العقد الوسطى على الاستقامة
         for (let i = 0; i < this.constraints.length; i++) {
             this.constraints[i].length = this.restLength;
         }
 
-        // تحديث أطوال قيود الانحناء أيضاً لتبقى متناسقة مع الطول الجديد للحبل
         for (let i = 0; i < this.bendConstraints.length; i++) {
             this.bendConstraints[i].length = this.restLength * 2;
         }

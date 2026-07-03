@@ -6,20 +6,27 @@ import { playCollisionSound } from '../core/AudioManager.js';
 import { updatePendulumTransform } from './PendulumDynamics.js';
 import { safeCos } from '../utils/MathUtils.js';
 import { solveFrameCollisions } from './FrameCollision.js';
+import {
+    pillarPositions,
+    PILLAR_Y_MIN,
+    PILLAR_Y_MAX,
+    PILLAR_RADIUS,
+    beamPositions,
+    BEAM_HALF_HEIGHT,
+    BEAM_HALF_DEPTH,
+    FRAME_WIDTH,
+} from '../objects/FrameGeometry.js';
 
-// متجه مؤقت لنقطة اتصال الحبل العلوية بالكرة
 const tempLocalTop = new THREE.Vector3(0, 0.5, 0);
 const tempBallWorldPos = new THREE.Vector3();
 
-/**
- * دالة فرعية متطورة لحل تصادم كرات البندولات مع عقد الحبال الحرة
- * تمنع الاختراق عن طريق التأثير المتبادل وتمرير الطاقة عبر نظام نسيج الحبل (Verlet Soft Physics)
- */
+// ==================== solveRopeCollisions (كرة-حبل) ====================
+
 function solveRopeCollisions(pendulums) {
-    const ballRadius = DIAMETER / 2; // 0.5
-    const ropeRadius = 0.015; 
+    const ballRadius = DIAMETER / 2;
+    const ropeRadius = 0.015;
     const minDistance = ballRadius + ropeRadius;
-    
+
     const currentBallPos = new THREE.Vector3();
     const nodeVec = new THREE.Vector3();
     const pushDir = new THREE.Vector3();
@@ -29,7 +36,7 @@ function solveRopeCollisions(pendulums) {
         pBall.ball.getWorldPosition(currentBallPos);
 
         for (let j = 0; j < BALL_COUNT; j++) {
-            if (i === j) continue; 
+            if (i === j) continue;
 
             const pRope = pendulums[j];
             const currentWireCount = pRope.wireCount ?? 2;
@@ -39,55 +46,41 @@ function solveRopeCollisions(pendulums) {
 
                 for (let k = 1; k < rope.nodes.length - 1; k++) {
                     const node = rope.nodes[k];
-
                     nodeVec.set(node.position.x, node.position.y, node.position.z);
                     const dist = nodeVec.distanceTo(currentBallPos);
 
                     if (dist < minDistance) {
                         const penetration = minDistance - dist;
-                        // الناظم n يشير من الكرة المصطدمة (pBall) نحو عقدة الحبل (بنفس اتفاق تصادم كرة-كرة أعلاه)
                         pushDir.subVectors(nodeVec, currentBallPos).normalize();
 
-                        // --- 1. دفع جسدي بسيط لتصحيح الاختراق البصري للعقدة (تجميلي فقط) ---
                         node.position.x += pushDir.x * penetration;
                         node.position.y += pushDir.y * penetration;
                         node.position.z += pushDir.z * penetration;
 
-                        // --- 2. سرعة الكرة المصطدمة (pBall) ---
                         const L1 = pBall.individualLength;
                         const cosX1 = safeCos(pBall.angle);
                         const cosZ1 = safeCos(pBall.angleZ || 0);
                         const v1x = cosX1 * cosZ1 * L1 * pBall.angularVelocity;
                         const v1z = cosZ1 * L1 * (pBall.angularVelocityZ || 0);
 
-                        // --- 3. سرعة الكرة "صاحبة" الحبل (pRope) ---
-                        // *** هذا كان مصدر المشكلة: الكود القديم لم يحسب هذه السرعة إطلاقاً وتعامل معها كصفر دائم،
-                        // لذلك لم يكن هناك أي تبادل حقيقي للزخم بين الكرتين عبر الحبل ***
                         const L2 = pRope.individualLength;
                         const cosX2 = safeCos(pRope.angle);
                         const cosZ2 = safeCos(pRope.angleZ || 0);
                         const v2x = cosX2 * cosZ2 * L2 * pRope.angularVelocity;
                         const v2z = cosZ2 * L2 * (pRope.angularVelocityZ || 0);
 
-                        // السرعة النسبية الحقيقية بين الكرتين (وليس بين الكرة والعقدة فقط) على طول الناظم n
                         const relVelX = v1x - v2x;
                         const relVelZ = v1z - v2z;
                         const relativeNormalVel = (relVelX * pushDir.x) + (relVelZ * pushDir.z);
 
-                        // إذا كانت الكرة تقترب فعلاً من الحبل (وليست مبتعدة عنه أصلاً)
                         if (relativeNormalVel > 0) {
                             const restitution = 0.85;
                             const m1 = pBall.individualMass || 1.0;
                             const m2 = pRope.individualMass || 1.0;
 
-                            // معامل "قبضة" نقطة الاصطدام على الحبل: الاصطدام قرب الكرة (k قريب من طرف الحبل)
-                            // ينقل الطاقة بقوة شبه كاملة، والاصطدام قرب نقطة التعليق (k قريب من 0)
-                            // ينقل جزءاً أقل بكثير لأن ذراع العزم حول محور التعليق أقصر هناك
                             const grip = Math.max(0.15, k / (rope.nodes.length - 1));
-                            const m2Effective = m2 / grip; // كتلة "ظاهرية" أكبر كلما اقتربت النقطة من محور التعليق
+                            const m2Effective = m2 / grip;
 
-                            // معادلة الاصطدام المرن القياسية (نفس معادلة تصادم كرة-كرة الموجودة أعلاه بالضبط)
-                            // تضمن حفظ الزخم والطاقة معاً بدلاً من "ارتداد مصطنع" لكرة واحدة فقط
                             const impulse = ((1 + restitution) * relativeNormalVel) / ((1 / m1) + (1 / m2Effective));
 
                             const dv1x = -(impulse / m1) * pushDir.x;
@@ -95,26 +88,20 @@ function solveRopeCollisions(pendulums) {
                             const dv2x = (impulse / m2Effective) * pushDir.x;
                             const dv2z = (impulse / m2Effective) * pushDir.z;
 
-                            // أ) ارتداد الكرة المصطدمة
                             pBall.angularVelocity += dv1x / (L1 * cosX1 || 1);
                             pBall.angularVelocityZ += dv1z / (L1 * cosZ1 || 1);
-
-                            // ب) *** التصحيح الجوهري ***: نقل الطاقة فعلياً إلى الكرة صاحبة الحبل نفسها
                             pRope.angularVelocity += dv2x / (L2 * cosX2 || 1);
                             pRope.angularVelocityZ += dv2z / (L2 * cosZ2 || 1);
 
-                            // ج) دفع زاوي بسيط لمنع الالتصاق البصري بين الكرة والحبل في نفس الإطار
                             pBall.angle -= (penetration * pushDir.x * 0.5) / L1;
                             pBall.angleZ -= (penetration * pushDir.z * 0.5) / L1;
                             updatePendulumTransform(pBall);
 
-                            // د) دفع بصري خفيف إضافي لعقدة الحبل نفسها (تموّج جمالي فقط، لا يحمل الطاقة الأساسية بعد الآن)
                             const mNode = node.mass || 0.1;
                             const nodeKick = (impulse * 0.15) / mNode;
                             node.oldPosition.x -= pushDir.x * nodeKick * 0.016;
                             node.oldPosition.y -= pushDir.y * nodeKick * 0.016;
                             node.oldPosition.z -= pushDir.z * nodeKick * 0.016;
-
                         }
                     }
                 }
@@ -123,73 +110,68 @@ function solveRopeCollisions(pendulums) {
     }
 }
 
-/**
- * تصادم الحبال مع بعضها البعض (String-to-String Collision)
- * يمنع اختراق (Clipping) الحبال لبعضها عندما تتقارب أو تتشابك أثناء التأرجح، وذلك عبر
- * دفع عقد الحبال الحرة (غير المثبتة والمتصلة بالكرة) بعيداً عن بعضها بمجرد تلامسها.
- * يتم تجاهل حبلي نفس البندول الواحد (V-Shape) لأنهما يلتقيان عمداً بجوار الكرة نفسها.
- */
-function solveRopeToRopeCollisions(pendulums) {
-    const ropeRadius = 0.015;
-    const minDistance = ropeRadius * 2 + 0.015; // نصف قطر مضاعف + هامش أمان بصري بسيط
+// ==================== solveRopeToRopeCollisions - مُلغاة (الآن داخل PhysicsRope) ====================
+// function solveRopeToRopeCollisions(pendulums) { ... } // أُلغيت
 
-    // تجميع كل الحبال الفيزيائية في قائمة واحدة مسطّحة مع معرف البندول المالك لها
+// ==================== prepareRopeCollisions - تجهيز المصادمات للحبال ====================
+
+function prepareRopeCollisions(pendulums) {
+    // تجميع كل الحبال
     const allRopes = [];
-    pendulums.forEach((p, pendulumIndex) => {
+    pendulums.forEach((p, idx) => {
         p.ropesPhysics.forEach(rope => {
-            if (rope && rope.nodes && rope.nodes.length > 2) {
-                allRopes.push({ pendulumIndex, rope });
+            if (rope && rope.nodes) {
+                allRopes.push({ rope, pendulum: p, index: idx });
             }
         });
     });
 
-    for (let a = 0; a < allRopes.length; a++) {
-        const ropeA = allRopes[a];
-        for (let b = a + 1; b < allRopes.length; b++) {
-            const ropeB = allRopes[b];
+    // تجهيز مصادمات الإطار لكل حبل
+    for (const { rope } of allRopes) {
+        rope.clearExternalColliders();
 
-            // تجاهل حبلي البندول نفسه (يلتقيان طبيعياً عند سقف الكرة)
-            if (ropeA.pendulumIndex === ropeB.pendulumIndex) continue;
+        // إضافة الأعمدة كمصادمات
+        for (const pillar of pillarPositions) {
+            rope.addExternalCollider('pillar', {
+                x: pillar.x,
+                z: pillar.z,
+                radius: PILLAR_RADIUS,
+                yMin: PILLAR_Y_MIN,
+                yMax: PILLAR_Y_MAX,
+            });
+        }
 
-            const nodesA = ropeA.rope.nodes;
-            const nodesB = ropeB.rope.nodes;
+        // إضافة القضبان كمصادمات
+        for (const beam of beamPositions) {
+            rope.addExternalCollider('beam', {
+                y: beam.y,
+                z: beam.z,
+                halfWidth: FRAME_WIDTH / 2,
+                halfHeight: BEAM_HALF_HEIGHT,
+                halfDepth: BEAM_HALF_DEPTH,
+            });
+        }
+    }
 
-            // نتجاهل العقدة الأولى (مثبتة بنقطة التعليق) والأخيرة (مثبتة بسطح الكرة)
-            // في كل حبل، ونفحص فقط العقد الحرة الوسطى المرنة
-            for (let i = 1; i < nodesA.length - 1; i++) {
-                const nodeA = nodesA[i];
-                for (let j = 1; j < nodesB.length - 1; j++) {
-                    const nodeB = nodesB[j];
+    // إضافة الحبال الأخرى كمصادمات (حبل-حبل)
+    for (let i = 0; i < allRopes.length; i++) {
+        for (let j = i + 1; j < allRopes.length; j++) {
+            // لا نضيف حبلي نفس البندول
+            if (allRopes[i].index === allRopes[j].index) continue;
 
-                    const dx = nodeB.position.x - nodeA.position.x;
-                    const dy = nodeB.position.y - nodeA.position.y;
-                    const dz = nodeB.position.z - nodeA.position.z;
-                    const distSq = dx * dx + dy * dy + dz * dz;
-
-                    if (distSq < minDistance * minDistance && distSq > 1e-10) {
-                        const dist = Math.sqrt(distSq);
-                        const penetration = (minDistance - dist) * 0.5;
-                        const nx = dx / dist;
-                        const ny = dy / dist;
-                        const nz = dz / dist;
-
-                        // دفع متماثل: كل عقدة تبتعد نصف مسافة التداخل عن الأخرى لمنع الاختراق
-                        nodeA.position.x -= nx * penetration;
-                        nodeA.position.y -= ny * penetration;
-                        nodeA.position.z -= nz * penetration;
-
-                        nodeB.position.x += nx * penetration;
-                        nodeB.position.y += ny * penetration;
-                        nodeB.position.z += nz * penetration;
-                    }
-                }
-            }
+            allRopes[i].rope.addExternalCollider('rope', allRopes[j].rope);
+            allRopes[j].rope.addExternalCollider('rope', allRopes[i].rope);
         }
     }
 }
 
+// ==================== solveCollisions الرئيسية ====================
+
 export function solveCollisions(pendulums) {
-    // 1. حل تصادم الكرات مع بعضها البعض أولاً
+    // 0. تجهيز مصادمات الحبال (قبل كل شيء)
+    prepareRopeCollisions(pendulums);
+
+    // 1. تصادم كرة-كرة
     for (let i = 0; i < BALL_COUNT; i++) {
         for (let j = i + 1; j < BALL_COUNT; j++) {
             const p1 = pendulums[i];
@@ -268,11 +250,10 @@ export function solveCollisions(pendulums) {
                 updatePendulumTransform(p1);
                 updatePendulumTransform(p2);
 
-                // --- التصحيح الدوراني الديناميكي للحبال ---
                 [p1, p2].forEach(p => {
                     if (p.ropesPhysics && p.ropesPhysics.length > 0) {
                         tempBallWorldPos.copy(tempLocalTop);
-                        p.ball.localToWorld(tempBallWorldPos); 
+                        p.ball.localToWorld(tempBallWorldPos);
 
                         p.ropesPhysics.forEach(rope => {
                             if (!rope) return;
@@ -289,12 +270,12 @@ export function solveCollisions(pendulums) {
         }
     }
 
-    // 2. استدعاء الدالة المحدثة كلياً لمعالجة تصادم الكرات مع الحبال المرنة الحرّة
+    // 2. تصادم كرة-حبل
     solveRopeCollisions(pendulums);
 
-    // 3. تصادم الحبال مع بعضها البعض لمنع اختراقها/تشابكها البصري (Clipping)
-    solveRopeToRopeCollisions(pendulums);
+    // 3. تصادم حبل-حبل وحبل-إطار (الآن داخل PhysicsRope.update!)
+    // لا حاجة لاستدعاء solveRopeToRopeCollisions هنا
 
-    // 4. منع اختراق الكرات والحبال لهيكل الحامل الخارجي (الأعمدة والقضبان الصلبة)
+    // 4. تصادم كرة-إطار
     solveFrameCollisions(pendulums);
 }
