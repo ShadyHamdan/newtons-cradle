@@ -1,13 +1,18 @@
+// Pendulum.js
 import * as THREE from 'three';
-import { chromeMaterial, wireMaterial, visualMaterials } from './Materials.js';
+import { chromeMaterial, visualMaterials } from './Materials.js';
+import { PhysicsRope } from '../physics/PhysicsRope.js'; 
+import { RenderRope } from '../objects/RenderRope.js';   
 
 export class Pendulum {
-    constructor(pivotX, pivotY, defaultLength, zOffset) {
+    constructor(pivotX, pivotY, defaultLength, zOffset, scene) { 
         this.pivotX = pivotX;
         this.pivotY = pivotY;
         this.individualLength = defaultLength;
         this.individualMass = 1.0;
         this.individualRestitution = 0.98;
+        this.zOffset = zOffset; 
+        this.wireCount = 2;
 
         this.angle = 0;
         this.angleZ = 0;
@@ -15,56 +20,70 @@ export class Pendulum {
         this.angularVelocityZ = 0;
         this.angularAcceleration = 0;
         this.angularAccelerationZ = 0;
-        this.wireCount = 2;
         this.worldPosition = new THREE.Vector3(pivotX, pivotY - defaultLength, 0);
 
         this.group = new THREE.Group();
         this.group.position.set(pivotX, pivotY, 0);
 
-        const wireGeometry = new THREE.CylinderGeometry(0.012, 0.012, 1, 8);
-        wireGeometry.translate(0, -0.5, 0);
-
-        this.leftWire = new THREE.Mesh(wireGeometry, wireMaterial);
-        this.rightWire = new THREE.Mesh(wireGeometry, wireMaterial);
-        this.leftWire.castShadow = true;
-        this.rightWire.castShadow = true;
-
+        // إنشاء الكرة بنصف قطر 0.5
         this.ballGeometry = new THREE.SphereGeometry(0.5, 64, 64);
         this.ball = new THREE.Mesh(this.ballGeometry, chromeMaterial);
         this.initialMaterial = this.ball.material;
         this.ball.position.y = -defaultLength;
         this.ball.castShadow = true;
         this.ball.receiveShadow = true;
-
-        this.group.add(this.leftWire);
-        this.group.add(this.rightWire);
         this.group.add(this.ball);
 
-        this.updateWires(defaultLength, zOffset, this.wireCount);
+        this.ropesPhysics = [];
+        this.ropesRender = [];
+
+        if (scene) {
+            this.initPhysicsRopes(scene);
+        }
     }
 
-    updateWires(length, zOffset, wireCount = this.wireCount ?? 2) {
-        const actualWireLength = Math.sqrt(length * length + zOffset * zOffset);
-        const angle = Math.atan2(zOffset, length);
+    initPhysicsRopes(scene) {
+        const ballWorldPos = new THREE.Vector3();
+        this.ball.getWorldPosition(ballWorldPos);
 
-        if (wireCount === 1) {
-            this.leftWire.position.set(0, 0, 0);
-            this.leftWire.rotation.x = 0;
-            this.leftWire.scale.y = length;
-            this.leftWire.visible = true;
-            this.rightWire.visible = false;
-            return;
+        if (this.wireCount === 1) {
+            const pivot = new THREE.Vector3(this.pivotX, this.pivotY, 0);
+            this.createRopePair(scene, pivot, ballWorldPos);
+        } else {
+            const pivotLeft = new THREE.Vector3(this.pivotX, this.pivotY, this.zOffset);
+            const pivotRight = new THREE.Vector3(this.pivotX, this.pivotY, -this.zOffset);
+
+            this.createRopePair(scene, pivotLeft, ballWorldPos);
+            this.createRopePair(scene, pivotRight, ballWorldPos);
         }
+    }
 
-        this.leftWire.position.set(0, 0, zOffset);
-        this.leftWire.rotation.x = angle;
-        this.leftWire.scale.y = actualWireLength;
-        this.leftWire.visible = true;
+    createRopePair(scene, startPos, endPos) {
+        // طرح 0.5 (نصف قطر الكرة) حتى لا يرتخي الحبل فيزيائياً
+        const actualRopeLength = this.individualLength - 0.5; 
 
-        this.rightWire.position.set(0, 0, -zOffset);
-        this.rightWire.rotation.x = -angle;
-        this.rightWire.scale.y = actualWireLength;
-        this.rightWire.visible = true;
+        const pRope = new PhysicsRope(startPos, endPos, { 
+            // تقليل عدد العقد من 15 إلى 8: عدد أقل من الأجزاء المتصلة يعني درجات حرية أقل
+            // للاهتزاز العشوائي، وبالتالي حبل يبدو أكثر صلابة واستقامة بشكل طبيعي
+            numNodes: 8, 
+            ropeLength: actualRopeLength,
+            // زيادة عدد تكرارات حل القيد يجعل الحبل أكثر صلابة وشدًا (أقل "طراوة")
+            // القيمة الافتراضية كانت 5 فقط وهي قليلة جداً مقابل 14 قطعة حبل متتالية
+            constraintIterations: 20,
+            // خيوط بندول نيوتن الحقيقية مشدودة ولا تتهدّل بفعل جاذبيتها الذاتية تقريباً؛
+            // تقليل الجاذبية الداخلية للحبل يمنع الترهل الزائد بين نقطتي التثبيت والكرة
+            gravity: -0.25,
+            // تخميد أقوى (0.8) يمتص اهتزاز الحبل العشوائي بسرعة أكبر بعد أي حركة أو صدمة
+            damping: 0.8,
+            // مقاومة انحناء عالية (قريبة من 1) تمنع الحبل من التموّج كالمطاط بين نقطتي التثبيت
+            bendStiffness: 0.9
+        });
+        
+        const rRope = new RenderRope(scene, { tubeRadius: 0.012 }); 
+        rRope.initMesh(pRope.nodes);
+
+        this.ropesPhysics.push(pRope);
+        this.ropesRender.push(rRope);
     }
 
     updateMaterial(restitution) {
