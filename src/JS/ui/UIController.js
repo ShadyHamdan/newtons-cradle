@@ -65,6 +65,11 @@ export function setupUI(pendulums) {
         settings.launchMode = UI.singleSideBtn.classList.contains('active') ? 'single' : 'double';
         settings.sound = UI.soundToggle.checked;
 
+// 🆕 نتحقق أولًا: هل كل الكرات من نفس المادة (نفس restitution)؟
+        const allSameMaterial = pendingBallsSettings.every(
+            b => (b.restitution ?? 0.98) === (pendingBallsSettings[0].restitution ?? 0.98)
+        );
+
         pendulums.forEach((p, index) => {
             const ballSettings = pendingBallsSettings[index];
             p.individualLength = ballSettings.stringLength;
@@ -80,12 +85,13 @@ export function setupUI(pendulums) {
                 p.ball.material = visualMaterials[currentRest] ? visualMaterials[currentRest] : visualMaterials['custom'];
             }
 
-          // 🆕 تحديث حجم الكرة بصريًا بناءً على الكتلة فقط
+            // 🆕 الحجم يتغير بالكتلة فقط إذا كل الكرات من نفس المادة، وإلا يبقى طبيعيًا
             if (typeof p.updateBallSize === 'function') {
-                p.updateBallSize(ballSettings.mass);
-            }
-            if (typeof p.updateWires === 'function') {
-                p.updateWires(ballSettings.stringLength, 1.4, p.wireCount);
+                if (allSameMaterial) {
+                    p.updateBallSize(ballSettings.mass);
+                } else {
+                    p.updateBallSize(1.0); // إرجاع الحجم الطبيعي لو فيه اختلاف بالمواد
+                }
             }
         });
 
