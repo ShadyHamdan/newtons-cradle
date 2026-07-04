@@ -7,8 +7,12 @@
   <link rel="stylesheet" href="src/css/style.css">
 </head>
 <body>
+  <!-- ═══════════════════════════════════════
+       🚀 لوحة الإطلاق (اليسار)
+       ═══════════════════════════════════════ -->
   <div class="launch-panel">
-    <div class="launch-title">إعدادات الانطلاق</div>
+    <div class="launch-title">🚀 إعدادات الانطلاق</div>
+    
     <div class="mode-buttons">
       <button class="mode-btn active" id="singleSideBtn" type="button">جهة واحدة</button>
       <button class="mode-btn" id="doubleSideBtn" type="button">جهتين</button>
@@ -35,15 +39,114 @@
       <input type="checkbox" id="enableZDrag" />
     </div>
 
-    <button class="launch-action" id="launchBtn" type="button">إطلاق الكرات</button>
+    <button class="launch-action" id="launchBtn" type="button">🚀 إطلاق الكرات</button>
   </div>
 
+  <!-- ═══════════════════════════════════════
+       ⚙️ لوحة التحكم الرئيسية (اليمين)
+       ═══════════════════════════════════════ -->
   <div id="controlPanel" class="panel">
-    <h2>Newton Cradle Pro</h2>
+    <h2>⚙️ Newton Cradle Pro</h2>
 
+    <!-- 🌍 اختيار الكوكب -->
     <div class="control-group">
-      <label for="planet-select">اختر الكوكب/البيئة:</label>
-      <select id="planet-select" class="ui-select">
+      <label>🌍 اختر الكوكب/البيئة:</label>
+      <div class="planet-select-wrapper" id="planet-select-wrapper">
+        <div class="planet-select-trigger" id="planet-select-trigger">
+          <div class="planet-selected">
+            <span class="planet-icon">🌍</span>
+            <div class="planet-info">
+              <span class="planet-name">الأرض</span>
+              <span class="planet-value">9.81 m/s²</span>
+            </div>
+          </div>
+          <span class="planet-arrow">▼</span>
+        </div>
+        <div class="planet-options" id="planet-options">
+          <div class="planet-option selected" data-value="earth">
+            <span class="planet-option-icon">🌍</span>
+            <div class="planet-option-info">
+              <span class="planet-option-name">الأرض</span>
+              <span class="planet-option-value">9.81 m/s²</span>
+            </div>
+            <div class="planet-option-bar" style="background: #4CAF50"></div>
+          </div>
+          <div class="planet-option" data-value="moon">
+            <span class="planet-option-icon">🌙</span>
+            <div class="planet-option-info">
+              <span class="planet-option-name">القمر</span>
+              <span class="planet-option-value">1.62 m/s²</span>
+            </div>
+            <div class="planet-option-bar" style="background: #B0B0B0"></div>
+          </div>
+          <div class="planet-option" data-value="mars">
+            <span class="planet-option-icon">🔴</span>
+            <div class="planet-option-info">
+              <span class="planet-option-name">المريخ</span>
+              <span class="planet-option-value">3.71 m/s²</span>
+            </div>
+            <div class="planet-option-bar" style="background: #E57373"></div>
+          </div>
+          <div class="planet-option" data-value="jupiter">
+            <span class="planet-option-icon">🟠</span>
+            <div class="planet-option-info">
+              <span class="planet-option-name">المشتري</span>
+              <span class="planet-option-value">24.79 m/s²</span>
+            </div>
+            <div class="planet-option-bar" style="background: #FFB74D"></div>
+          </div>
+          <div class="planet-option" data-value="mercury">
+            <span class="planet-option-icon">☿️</span>
+            <div class="planet-option-info">
+              <span class="planet-option-name">عطارد</span>
+              <span class="planet-option-value">3.70 m/s²</span>
+            </div>
+            <div class="planet-option-bar" style="background: #90A4AE"></div>
+          </div>
+          <div class="planet-option" data-value="venus">
+            <span class="planet-option-icon">✨</span>
+            <div class="planet-option-info">
+              <span class="planet-option-name">الزهرة</span>
+              <span class="planet-option-value">8.87 m/s²</span>
+            </div>
+            <div class="planet-option-bar" style="background: #FFF176"></div>
+          </div>
+          <div class="planet-option" data-value="saturn">
+            <span class="planet-option-icon">🪐</span>
+            <div class="planet-option-info">
+              <span class="planet-option-name">زحل</span>
+              <span class="planet-option-value">10.44 m/s²</span>
+            </div>
+            <div class="planet-option-bar" style="background: #FFE082"></div>
+          </div>
+          <div class="planet-option" data-value="uranus">
+            <span class="planet-option-icon">🔵</span>
+            <div class="planet-option-info">
+              <span class="planet-option-name">أورانوس</span>
+              <span class="planet-option-value">8.69 m/s²</span>
+            </div>
+            <div class="planet-option-bar" style="background: #80DEEA"></div>
+          </div>
+          <div class="planet-option" data-value="neptune">
+            <span class="planet-option-icon">🔷</span>
+            <div class="planet-option-info">
+              <span class="planet-option-name">نبتون</span>
+              <span class="planet-option-value">11.15 m/s²</span>
+            </div>
+            <div class="planet-option-bar" style="background: #7986CB"></div>
+          </div>
+          <div class="planet-option" data-value="custom">
+            <span class="planet-option-icon">⚙️</span>
+            <div class="planet-option-info">
+              <span class="planet-option-name">مخصص</span>
+              <span class="planet-option-value">تعيين يدوي</span>
+            </div>
+            <div class="planet-option-bar" style="background: #9E9E9E"></div>
+          </div>
+        </div>
+      </div>
+      <!-- القائمة الأصلية مخفية -->
+      <select id="planet-select" style="display: none;">
         <option value="earth" selected>الأرض (9.81 m/s²)</option>
         <option value="moon">القمر (1.62 m/s²)</option>
         <option value="mars">المريخ (3.71 m/s²)</option>
@@ -57,25 +160,32 @@
       </select>
     </div>
 
+    <!-- ⚖️ الجاذبية -->
     <div class="group">
-      <label><span id="gravityValue">9.81</span> الجاذبية</label>
+      <label>⚖️ الجاذبية: <span id="gravityValue">9.81</span></label>
       <input id="gravityInput" type="range" min="1" max="30" step="0.1" value="9.81" />
     </div>
 
+    <!-- 💨 مقاومة الهواء -->
     <div class="group">
-      <label><span id="dampingValue">0.0006</span> مقاومة الهواء</label>
+      <label>💨 مقاومة الهواء: <span id="dampingValue">0.0006</span></label>
       <input id="dampingInput" type="range" min="0" max="0.05" step="0.0001" value="0.0006" />
     </div>
 
+    <!-- ═══════════════════════════════════════
+         🔧 التحكم المتقدم بالكرات
+         ═══════════════════════════════════════ -->
     <div class="separator">
-      <div class="separator-title">التحكم المتقدم بالكرات</div>
+      <div class="separator-title">🔧 التحكم المتقدم بالكرات</div>
+      
       <div class="mode-buttons" style="margin-bottom: 12px;">
         <button class="mode-btn active" id="allBallsModeBtn" type="button">الكل معاً</button>
         <button class="mode-btn" id="singleBallModeBtn" type="button">تخصيص كرة</button>
       </div>
 
+      <!-- 🔘 اختيار الكرة -->
       <div class="group" id="ballSelectGroup" style="opacity: 0.5; pointer-events: none; transition: opacity 0.2s;">
-        <label>اختر الكرة لتعديلها</label>
+        <label>🔘 اختر الكرة لتعديلها</label>
         <select id="ballSelect">
           <option value="0">الكرة 1 (الأولى من اليسار)</option>
           <option value="1">الكرة 2</option>
@@ -85,34 +195,182 @@
         </select>
       </div>
 
-      <div class="group">
-        <label>مادة الكرة:</label>
-        <select id="materialSelect">
-          <option value="0.98" selected>فولاذ</option>
-          <option value="0.92">زجاج</option>
-          <option value="0.80">مطاط</option>
-          <option value="0.50">خشب</option>
-          <option value="custom">مخصص</option>
-        </select>
+     
+
+  
+<!-- 🔩 مادة الكرة -->
+<div class="group">
+  <label>🔩 مادة الكرة:</label>
+
+  <div class="material-select-wrapper" id="material-select-wrapper">
+
+    <!-- الزر الرئيسي -->
+    <div class="material-select-trigger" id="material-select-trigger">
+
+      <div class="material-selected">
+
+        <img
+          src="src\assets\materials\Steel.png"
+          class="material-img"
+          alt="فولاذ"
+          id="material-trigger-img">
+
+        <div class="material-info">
+          <span class="material-name" id="material-trigger-name">فولاذ</span>
+          <span class="material-value" id="material-trigger-value">
+            ارتداد: 0.98
+          </span>
+        </div>
+
       </div>
 
+      <span class="material-arrow">▼</span>
+
+    </div>
+
+    <!-- القائمة -->
+    <div class="material-options" id="material-options">
+
+      <!-- فولاذ -->
+      <div
+        class="material-option selected"
+        data-value="0.98"
+        data-name="فولاذ"
+        data-image="src\assets\materials\Steel.png">
+
+        <img
+          src="src\assets\materials\Steel.png"
+          class="material-option-img"
+          alt="فولاذ">
+
+        <div class="material-option-info">
+          <span class="material-option-name">فولاذ</span>
+          <span class="material-option-value">ارتداد: 0.98</span>
+        </div>
+
+        <div class="material-option-bar" style="background:#78909C;"></div>
+
+      </div>
+
+      <!-- زجاج -->
+      <div
+        class="material-option"
+        data-value="0.92"
+        data-name="زجاج"
+        data-image="src\assets\materials\Glass.png">
+
+        <img
+          src="src\assets\materials\Glass.png"
+          class="material-option-img"
+          alt="زجاج">
+
+        <div class="material-option-info">
+          <span class="material-option-name">زجاج</span>
+          <span class="material-option-value">ارتداد: 0.92</span>
+        </div>
+
+        <div class="material-option-bar" style="background:#4FC3F7;"></div>
+
+      </div>
+
+      <!-- مطاط -->
+      <div
+        class="material-option"
+        data-value="0.80"
+        data-name="مطاط"
+        data-image="src\assets\materials\Rubber.png">
+
+        <img
+          src="src\assets\materials\Rubber.png"
+          class="material-option-img"
+          alt="مطاط">
+
+        <div class="material-option-info">
+          <span class="material-option-name">مطاط</span>
+          <span class="material-option-value">ارتداد: 0.80</span>
+        </div>
+
+        <div class="material-option-bar" style="background:#333333;"></div>
+
+      </div>
+
+      <!-- خشب -->
+      <div
+        class="material-option"
+        data-value="0.50"
+        data-name="خشب"
+        data-image="src\assets\materials\Wood.png">
+
+        <img
+          src="src\assets\materials\Wood.png"
+          class="material-option-img"
+          alt="خشب">
+
+        <div class="material-option-info">
+          <span class="material-option-name">خشب</span>
+          <span class="material-option-value">ارتداد: 0.50</span>
+        </div>
+
+        <div class="material-option-bar" style="background:#8D6E63;"></div>
+
+      </div>
+
+      <!-- مخصص -->
+      <div
+        class="material-option"
+        data-value="custom"
+        data-name="مخصص"
+        data-image="src\assets\materials\settings-icon-png.png">
+
+        <img
+          src="src\assets\materials\settings-icon-png.png"
+          class="material-option-img"
+          alt="مخصص">
+
+        <div class="material-option-info">
+          <span class="material-option-name">مخصص</span>
+          <span class="material-option-value">تعيين يدوي</span>
+        </div>
+
+        <div class="material-option-bar" style="background:#E94560;"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- القائمة الأصلية المخفية -->
+  <select id="materialSelect" style="display:none;">
+    <option value="0.98" selected>فولاذ</option>
+    <option value="0.92">زجاج</option>
+    <option value="0.80">مطاط</option>
+    <option value="0.50">خشب</option>
+    <option value="custom">مخصص</option>
+  </select>
+
+</div>
+      <!-- 📊 معامل الارتداد -->
       <div class="group" id="customRestitutionGroup" style="display: none;">
-        <label><span id="restitutionValue">0.980</span> معامل الارتداد الدقيق</label>
+        <label>📊 معامل الارتداد الدقيق: <span id="restitutionValue">0.980</span></label>
         <input id="restitutionInput" type="range" min="0.1" max="1" step="0.001" value="0.98" />
       </div>
 
+      <!-- 📏 طول الخيط -->
       <div class="group">
-        <label><span id="lengthValue">5.0</span> طول الخيط</label>
+        <label>📏 طول الخيط: <span id="lengthValue">5.0</span></label>
         <input id="lengthInput" type="range" min="2" max="6" step="0.1" value="5" />
       </div>
 
+      <!-- ⚖️ الكتلة -->
       <div class="group">
-        <label><span id="massValue">1.0</span> الكتلة</label>
+        <label>⚖️ الكتلة: <span id="massValue">1.0</span></label>
         <input id="massInput" type="range" min="0.1" max="10" step="0.1" value="1" />
       </div>
 
+      <!-- 🧵 طريقة التعليق -->
       <div class="group">
-        <label>طريقة التعليق:</label>
+        <label>🧵 طريقة التعليق:</label>
         <select id="wireSelect">
           <option value="2">خيطين (V)</option>
           <option value="1">خيط واحد</option>
@@ -120,16 +378,18 @@
       </div>
     </div>
 
+    <!-- 🔊 الصوت -->
     <div class="group toggle">
-      <label for="soundToggle" style="margin-bottom: 0;">تفعيل المؤثرات الصوتية</label>
+      <label for="soundToggle" style="margin-bottom: 0;">🔊 تفعيل المؤثرات الصوتية</label>
       <input id="soundToggle" type="checkbox" checked />
     </div>
 
+    <!-- الأزرار -->
     <div class="buttons">
-      <button class="apply" id="applyBtn" type="button">تطبيق التغييرات</button>
-      <button class="reset" id="resetBtn" type="button">إعادة ضبط</button>
+      <button class="apply" id="applyBtn" type="button">✓ تطبيق التغييرات</button>
+      <button class="reset" id="resetBtn" type="button">🔄 إعادة ضبط</button>
     </div>
-  </div>
+  </div>  <!-- ← إغلاق controlPanel هنا فقط! -->
 
   <script type="module" src="./main.js"></script>
 </body>
