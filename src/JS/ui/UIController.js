@@ -80,6 +80,10 @@ export function setupUI(pendulums) {
                 p.ball.material = visualMaterials[currentRest] ? visualMaterials[currentRest] : visualMaterials['custom'];
             }
 
+          // 🆕 تحديث حجم الكرة بصريًا بناءً على الكتلة فقط
+            if (typeof p.updateBallSize === 'function') {
+                p.updateBallSize(ballSettings.mass);
+            }
             if (typeof p.updateWires === 'function') {
                 p.updateWires(ballSettings.stringLength, 1.4, p.wireCount);
             }
@@ -144,6 +148,9 @@ export function setupUI(pendulums) {
         pendulums.forEach(p => {
             p.wireCount = 2;
             p.ball.material = p.initialMaterial || visualMaterials[0.98];
+       if (typeof p.updateBallSize === 'function') {
+                p.updateBallSize(1.0);
+            }
             if (typeof p.updateWires === 'function') {
                 p.updateWires(p.individualLength, 1.4, p.wireCount);
             }
