@@ -1,17 +1,20 @@
 // Pendulum.js
 import * as THREE from 'three';
 import { chromeMaterial, visualMaterials } from './Materials.js';
-import { PhysicsRope } from '../physics/PhysicsRope.js'; 
-import { RenderRope } from '../objects/RenderRope.js';   
-
+import { PhysicsRope } from '../physics/PhysicsRope.js';
+import { RenderRope } from '../objects/RenderRope.js';
+const REFERENCE_MASS = 1.0;
+const SIZE_SENSITIVITY = 0.09;
+const MIN_SCALE = 0.94;
+const MAX_SCALE = 1.06;
 export class Pendulum {
-    constructor(pivotX, pivotY, defaultLength, zOffset, scene) { 
+    constructor(pivotX, pivotY, defaultLength, zOffset, scene) {
         this.pivotX = pivotX;
         this.pivotY = pivotY;
         this.individualLength = defaultLength;
         this.individualMass = 1.0;
         this.individualRestitution = 0.98;
-        this.zOffset = zOffset; 
+        this.zOffset = zOffset;
         this.wireCount = 2;
 
         this.angle = 0;
@@ -60,12 +63,12 @@ export class Pendulum {
 
     createRopePair(scene, startPos, endPos) {
         // طرح 0.5 (نصف قطر الكرة) حتى لا يرتخي الحبل فيزيائياً
-        const actualRopeLength = this.individualLength - 0.5; 
+        const actualRopeLength = this.individualLength - 0.5;
 
-        const pRope = new PhysicsRope(startPos, endPos, { 
+        const pRope = new PhysicsRope(startPos, endPos, {
             // تقليل عدد العقد من 15 إلى 8: عدد أقل من الأجزاء المتصلة يعني درجات حرية أقل
             // للاهتزاز العشوائي، وبالتالي حبل يبدو أكثر صلابة واستقامة بشكل طبيعي
-            numNodes: 8, 
+            numNodes: 8,
             ropeLength: actualRopeLength,
             // زيادة عدد تكرارات حل القيد يجعل الحبل أكثر صلابة وشدًا (أقل "طراوة")
             // القيمة الافتراضية كانت 5 فقط وهي قليلة جداً مقابل 14 قطعة حبل متتالية
@@ -78,8 +81,8 @@ export class Pendulum {
             // مقاومة انحناء عالية (قريبة من 1) تمنع الحبل من التموّج كالمطاط بين نقطتي التثبيت
             bendStiffness: 0.9
         });
-        
-        const rRope = new RenderRope(scene, { tubeRadius: 0.012 }); 
+
+        const rRope = new RenderRope(scene, { tubeRadius: 0.012 });
         rRope.initMesh(pRope.nodes);
 
         this.ropesPhysics.push(pRope);
@@ -88,5 +91,15 @@ export class Pendulum {
 
     updateMaterial(restitution) {
         this.ball.material = visualMaterials[restitution] || visualMaterials['custom'];
+    }
+    /**
+         * تحديث حجم الكرة بصريًا بناءً على الكتلة، بنمو مستمر وتدريجي
+         * (لوغاريتمي) طوال مدى الكتلة بالكامل، بتأثير خفيف وغير مبالغ فيه.
+         */
+    updateBallSize(mass) {
+        const safeMass = Math.max(mass, 0.01); // تفادي log(0) أو أرقام سالبة
+        const rawScale = 1 + SIZE_SENSITIVITY * Math.log10(safeMass / REFERENCE_MASS);
+        const clampedScale = THREE.MathUtils.clamp(rawScale, MIN_SCALE, MAX_SCALE);
+        this.ball.scale.setScalar(clampedScale);
     }
 }
