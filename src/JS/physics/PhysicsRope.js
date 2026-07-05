@@ -275,7 +275,8 @@ export class PhysicsRope {
 
     // === دالة جديدة: تصادم حبل-حبل مدمج ===
     solveRopeCollision(otherRope) {
-        const minDistance = this.ropeCollisionRadius * 2 + 0.005;
+        const otherRadius = otherRope?.ropeCollisionRadius ?? this.ropeCollisionRadius;
+        const minDistance = Math.max(this.ropeCollisionRadius, otherRadius) * 2 + 0.005;
         const minDistSq = minDistance * minDistance;
 
         for (let i = 1; i < this.numNodes - 1; i++) {

@@ -31,6 +31,7 @@ export function setupUI(pendulums) {
             UI.massInput.value = currentBallSettings.mass;
             UI.massValue.textContent = currentBallSettings.mass.toFixed(1);
             UI.wireSelect.value = currentBallSettings.wireCount;
+            if (UI.ropeTypeSelect) UI.ropeTypeSelect.value = currentBallSettings.ropeType || 'default';
 
             const ballRestitution = currentBallSettings.restitution ?? 0.98;
             const formattedRestitution = ballRestitution.toFixed(2);
@@ -81,7 +82,12 @@ export function setupUI(pendulums) {
             p.individualMass = ballSettings.mass;
             p.individualRestitution = ballSettings.restitution ?? 0.98;
             p.wireCount = ballSettings.wireCount;
+            p.ropeType = ballSettings.ropeType || 'default';
             p.ball.position.y = -ballSettings.stringLength;
+
+            if (typeof p.updateRopeType === 'function') {
+                p.updateRopeType(p.ropeType);
+            }
 
             if (typeof p.updateMaterial === 'function') {
                 p.updateMaterial(ballSettings.restitution);
@@ -131,6 +137,7 @@ export function setupUI(pendulums) {
             b.mass = 1.0;
             b.wireCount = 2;
             b.restitution = 0.98;
+            b.ropeType = 'default';
         });
 
         if (UI.allBallsModeBtn) UI.allBallsModeBtn.classList.add('active');
@@ -145,6 +152,7 @@ export function setupUI(pendulums) {
         if (UI.massInput) UI.massInput.value = 1;
         if (UI.massValue) UI.massValue.textContent = '1.0';
         if (UI.wireSelect) UI.wireSelect.value = '2';
+        if (UI.ropeTypeSelect) UI.ropeTypeSelect.value = 'default';
         if (UI.soundToggle) UI.soundToggle.checked = true;
 
         settings.gravity = 9.81;
@@ -160,6 +168,10 @@ export function setupUI(pendulums) {
 
         pendulums.forEach(p => {
             p.wireCount = 2;
+            p.ropeType = 'default';
+            if (typeof p.updateRopeType === 'function') {
+                p.updateRopeType('default');
+            }
             p.ball.material = p.initialMaterial || visualMaterials[0.98];
        if (typeof p.updateBallSize === 'function') {
                 p.updateBallSize(1.0);

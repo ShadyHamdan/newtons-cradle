@@ -1,6 +1,6 @@
 // Pendulum.js
 import * as THREE from 'three';
-import { chromeMaterial, visualMaterials } from './Materials.js';
+import { chromeMaterial, visualMaterials, getRopeStylePreset } from './Materials.js';
 import { PhysicsRope } from '../physics/PhysicsRope.js';
 import { RenderRope } from '../objects/RenderRope.js';
 const REFERENCE_MASS = 1.0;
@@ -16,6 +16,7 @@ export class Pendulum {
         this.individualRestitution = 0.98;
         this.zOffset = zOffset;
         this.wireCount = 2;
+        this.ropeType = 'default';
 
         this.angle = 0;
         this.angleZ = 0;
@@ -51,42 +52,70 @@ export class Pendulum {
 
         if (this.wireCount === 1) {
             const pivot = new THREE.Vector3(this.pivotX, this.pivotY, 0);
-            this.createRopePair(scene, pivot, ballWorldPos);
+            this.createRopePair(scene, pivot, ballWorldPos, this.ropeType);
         } else {
             const pivotLeft = new THREE.Vector3(this.pivotX, this.pivotY, this.zOffset);
             const pivotRight = new THREE.Vector3(this.pivotX, this.pivotY, -this.zOffset);
 
-            this.createRopePair(scene, pivotLeft, ballWorldPos);
-            this.createRopePair(scene, pivotRight, ballWorldPos);
+            this.createRopePair(scene, pivotLeft, ballWorldPos, this.ropeType);
+            this.createRopePair(scene, pivotRight, ballWorldPos, this.ropeType);
         }
     }
 
-    createRopePair(scene, startPos, endPos) {
+    createRopePair(scene, startPos, endPos, ropeType = 'default') {
+        const ropePreset = getRopeStylePreset(ropeType);
         // طرح 0.5 (نصف قطر الكرة) حتى لا يرتخي الحبل فيزيائياً
         const actualRopeLength = this.individualLength - 0.5;
 
         const pRope = new PhysicsRope(startPos, endPos, {
-            // تقليل عدد العقد من 15 إلى 8: عدد أقل من الأجزاء المتصلة يعني درجات حرية أقل
-            // للاهتزاز العشوائي، وبالتالي حبل يبدو أكثر صلابة واستقامة بشكل طبيعي
-            numNodes: 8,
+            numNodes: ropePreset.numNodes,
             ropeLength: actualRopeLength,
-            // زيادة عدد تكرارات حل القيد يجعل الحبل أكثر صلابة وشدًا (أقل "طراوة")
-            // القيمة الافتراضية كانت 5 فقط وهي قليلة جداً مقابل 14 قطعة حبل متتالية
             constraintIterations: 20,
-            // خيوط بندول نيوتن الحقيقية مشدودة ولا تتهدّل بفعل جاذبيتها الذاتية تقريباً؛
-            // تقليل الجاذبية الداخلية للحبل يمنع الترهل الزائد بين نقطتي التثبيت والكرة
-            gravity: -0.25,
-            // تخميد أقوى (0.8) يمتص اهتزاز الحبل العشوائي بسرعة أكبر بعد أي حركة أو صدمة
-            damping: 0.8,
-            // مقاومة انحناء عالية (قريبة من 1) تمنع الحبل من التموّج كالمطاط بين نقطتي التثبيت
-            bendStiffness: 0.9
+            gravity: ropePreset.gravity,
+            damping: ropePreset.damping,
+            bendStiffness: ropePreset.bendStiffness,
+            ropeCollisionRadius: ropePreset.ropeCollisionRadius,
+            ropeRestitution: ropePreset.ropeRestitution
         });
 
-        const rRope = new RenderRope(scene, { tubeRadius: 0.012 });
+        const rRope = new RenderRope(scene, {
+            tubeRadius: ropePreset.tubeRadius,
+            radialSegments: ropePreset.radialSegments,
+            tubeMaterial: ropePreset.material
+        });
         rRope.initMesh(pRope.nodes);
+
+        pRope.ropeType = ropeType;
+        rRope.ropeType = ropeType;
 
         this.ropesPhysics.push(pRope);
         this.ropesRender.push(rRope);
+    }
+
+    updateRopeType(ropeType) {
+        const ropePreset = getRopeStylePreset(ropeType);
+        this.ropeType = ropeType;
+
+        this.ropesPhysics.forEach((rope) => {
+            if (!rope) return;
+            rope.ropeType = ropeType;
+            rope.ropeCollisionRadius = ropePreset.ropeCollisionRadius;
+            rope.ropeRestitution = ropePreset.ropeRestitution;
+            rope.gravity = ropePreset.gravity;
+            rope.damping = ropePreset.damping;
+            rope.bendStiffness = ropePreset.bendStiffness;
+        });
+
+        this.ropesRender.forEach((rope) => {
+            if (!rope) return;
+            rope.ropeType = ropeType;
+            rope.tubeRadius = ropePreset.tubeRadius;
+            rope.radialSegments = ropePreset.radialSegments;
+            rope.tubeMaterial = ropePreset.material;
+            if (rope.ropeMesh) {
+                rope.ropeMesh.material = ropePreset.material;
+            }
+        });
     }
 
     updateMaterial(restitution) {

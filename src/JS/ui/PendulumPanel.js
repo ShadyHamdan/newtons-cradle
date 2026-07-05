@@ -54,6 +54,16 @@ export function initPendulumPanel(controlModeRef, updateSlidersCallback, saveRes
         }
     });
 
+    UI.ropeTypeSelect?.addEventListener('change', () => {
+        const val = UI.ropeTypeSelect.value;
+        if (controlModeRef.value === 'all') {
+            pendingBallsSettings.forEach(b => b.ropeType = val);
+        } else {
+            const selectedIdx = parseInt(UI.ballSelect.value);
+            pendingBallsSettings[selectedIdx].ropeType = val;
+        }
+    });
+
     UI.restitutionInput.addEventListener('input', () => {
         const val = parseFloat(UI.restitutionInput.value);
         UI.restitutionValue.textContent = val.toFixed(3);

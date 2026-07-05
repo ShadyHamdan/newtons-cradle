@@ -24,8 +24,6 @@ const tempBallWorldPos = new THREE.Vector3();
 
 function solveRopeCollisions(pendulums) {
     const ballRadius = DIAMETER / 2;
-    const ropeRadius = 0.015;
-    const minDistance = ballRadius + ropeRadius;
 
     const currentBallPos = new THREE.Vector3();
     const nodeVec = new THREE.Vector3();
@@ -43,6 +41,8 @@ function solveRopeCollisions(pendulums) {
 
             pRope.ropesPhysics.forEach((rope, ropeIdx) => {
                 if (!rope || !rope.nodes || (currentWireCount === 1 && ropeIdx === 1)) return;
+                const ropeRadius = rope.ropeCollisionRadius ?? 0.015;
+                const minDistance = ballRadius + ropeRadius;
 
                 for (let k = 1; k < rope.nodes.length - 1; k++) {
                     const node = rope.nodes[k];

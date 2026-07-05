@@ -18,5 +18,6 @@ export const pendingBallsSettings = Array.from({ length: BALL_COUNT }, () => ({
     stringLength: 5.0,
     mass: 1.0,
     wireCount: 2,
-    restitution: 0.98
+    restitution: 0.98,
+    ropeType: 'default'
 }));

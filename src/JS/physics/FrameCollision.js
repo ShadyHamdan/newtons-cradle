@@ -232,12 +232,13 @@ export function solveFrameCollisions(pendulums) {
         // تصادم الحبال مع الإطار
         for (const rope of p.ropesPhysics) {
             if (!rope || !rope.nodes) continue;
+            const ropeRadius = rope.ropeCollisionRadius ?? ropeCollisionRadius;
 
             for (let i = 1; i < rope.nodes.length - 1; i++) {
                 const node = rope.nodes[i];
 
                 for (const pillar of pillarPositions) {
-                    const hit = resolvePointVsPillar(node.position, pillar, ropeCollisionRadius);
+                    const hit = resolvePointVsPillar(node.position, pillar, ropeRadius);
                     if (hit) {
                         node.position.x += hit.x;
                         node.position.z += hit.z;
@@ -245,7 +246,7 @@ export function solveFrameCollisions(pendulums) {
                 }
 
                 for (const beam of beamPositions) {
-                    const hit = resolvePointVsBeam(node.position, beam, ropeCollisionRadius);
+                    const hit = resolvePointVsBeam(node.position, beam, ropeRadius);
                     if (hit) {
                         node.position.y += hit.y;
                         node.position.z += hit.z;

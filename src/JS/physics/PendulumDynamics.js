@@ -2,22 +2,27 @@ import * as THREE from 'three';
 import { settings } from '../config/SimulationConfig.js';
 import { FIXED_DT, PIVOT_Y } from './Constants.js';
 import { safeCos } from '../utils/MathUtils.js';
+import { getRopeStylePreset } from '../objects/Materials.js';
 
 export function updatePendulumPhysics(p) {
     if (!p) return;
 
+    const ropePreset = getRopeStylePreset(p.ropeType);
+    const motionGain = ropePreset.motionGain ?? 1;
+    const motionDamping = ropePreset.motionDamping ?? 1;
+
     p.angularAcceleration = -(settings.gravity / p.individualLength) * Math.sin(p.angle);
     p.angularVelocity += p.angularAcceleration * FIXED_DT;
-    p.angularVelocity *= settings.airDamping;
-    p.angle += p.angularVelocity * FIXED_DT;
+    p.angularVelocity *= settings.airDamping * motionDamping;
+    p.angle += p.angularVelocity * FIXED_DT * motionGain;
 
     if (p.angleZ === undefined) p.angleZ = 0;
     if (p.angularVelocityZ === undefined) p.angularVelocityZ = 0;
 
     p.angularAccelerationZ = -(settings.gravity / p.individualLength) * Math.sin(p.angleZ);
     p.angularVelocityZ += p.angularAccelerationZ * FIXED_DT;
-    p.angularVelocityZ *= settings.airDamping;
-    p.angleZ += p.angularVelocityZ * FIXED_DT;
+    p.angularVelocityZ *= settings.airDamping * motionDamping;
+    p.angleZ += p.angularVelocityZ * FIXED_DT * motionGain;
 }
 
 export function updatePendulumTransform(p) {

@@ -15,6 +15,7 @@ export const UIElements = {
     massInput: document.getElementById('massInput'),
     massValue: document.getElementById('massValue'),
     wireSelect: document.getElementById('wireSelect'),
+    ropeTypeSelect: document.getElementById('ropeTypeSelect'),
     launchCountInput: document.getElementById('launchCountInput'),
     launchCountValue: document.getElementById('launchCountValue'),
     launchAngleInput: document.getElementById('launchAngleInput'),
