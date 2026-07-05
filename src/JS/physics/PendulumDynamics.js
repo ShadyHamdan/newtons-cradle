@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { settings } from '../config/SimulationConfig.js';
 import { FIXED_DT, PIVOT_Y } from './Constants.js';
+import { safeCos } from '../utils/MathUtils.js';
 
 export function updatePendulumPhysics(p) {
     if (!p) return;
@@ -31,9 +32,9 @@ export function updatePendulumTransform(p) {
     p.group.rotation.set(0, 0, 0);
 
     const sinX = Math.sin(angleX);
-    const cosX = Math.cos(angleX);
+    const cosX = safeCos(angleX);
     const sinZ = Math.sin(angleZ);
-    const cosZ = Math.cos(angleZ);
+    const cosZ = safeCos(angleZ);
 
     const localX = L * sinX * cosZ;
     const localZ = L * sinZ;

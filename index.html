@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Newton Cradle Pro</title>
   <link rel="stylesheet" href="src/css/style.css">
 </head>
+
 <body>
   <!-- ═══════════════════════════════════════
        🚀 لوحة الإطلاق (اليسار)
        ═══════════════════════════════════════ -->
   <div class="launch-panel">
     <div class="launch-title">🚀 إعدادات الانطلاق</div>
-    
+
     <div class="mode-buttons">
       <button class="mode-btn active" id="singleSideBtn" type="button">جهة واحدة</button>
       <button class="mode-btn" id="doubleSideBtn" type="button">جهتين</button>
@@ -31,7 +33,7 @@
 
     <div class="group">
       <label>زاوية الانحراف نحو Z (بالدرجات):</label>
-      <input type="range" id="launchAngleZInput" min="-90" max="90" value="0" />
+      <input type="range" id="launchAngleZInput" min="-80" max="80" value="0" />
       <span id="launchAngleZValue">0°</span>
     </div>
 
@@ -178,7 +180,7 @@
          ═══════════════════════════════════════ -->
     <div class="separator">
       <div class="separator-title">🔧 التحكم المتقدم بالكرات</div>
-      
+
       <div class="mode-buttons" style="margin-bottom: 12px;">
         <button class="mode-btn active" id="allBallsModeBtn" type="button">الكل معاً</button>
         <button class="mode-btn" id="singleBallModeBtn" type="button">تخصيص كرة</button>
@@ -196,161 +198,125 @@
         </select>
       </div>
 
-     
 
-  
-<!-- 🔩 مادة الكرة -->
-<div class="group">
-  <label>🔩 مادة الكرة:</label>
 
-  <div class="material-select-wrapper" id="material-select-wrapper">
 
-    <!-- الزر الرئيسي -->
-    <div class="material-select-trigger" id="material-select-trigger">
+      <!-- 🔩 مادة الكرة -->
+      <div class="group">
+        <label>🔩 مادة الكرة:</label>
 
-      <div class="material-selected">
+        <div class="material-select-wrapper" id="material-select-wrapper">
 
-        <img
-          src="src\assets\materials\Steel.png"
-          class="material-img"
-          alt="فولاذ"
-          id="material-trigger-img">
+          <!-- الزر الرئيسي -->
+          <div class="material-select-trigger" id="material-select-trigger">
 
-        <div class="material-info">
-          <span class="material-name" id="material-trigger-name">فولاذ</span>
-          <span class="material-value" id="material-trigger-value">
-            ارتداد: 0.98
-          </span>
+            <div class="material-selected">
+
+              <img src="src\assets\materials\Steel.png" class="material-img" alt="فولاذ" id="material-trigger-img">
+
+              <div class="material-info">
+                <span class="material-name" id="material-trigger-name">فولاذ</span>
+                <span class="material-value" id="material-trigger-value">
+                  ارتداد: 0.98
+                </span>
+              </div>
+
+            </div>
+
+            <span class="material-arrow">▼</span>
+
+          </div>
+
+          <!-- القائمة -->
+          <div class="material-options" id="material-options">
+
+            <!-- فولاذ -->
+            <div class="material-option selected" data-value="0.98" data-name="فولاذ"
+              data-image="src\assets\materials\Steel.png">
+
+              <img src="src\assets\materials\Steel.png" class="material-option-img" alt="فولاذ">
+
+              <div class="material-option-info">
+                <span class="material-option-name">فولاذ</span>
+                <span class="material-option-value">ارتداد: 0.98</span>
+              </div>
+
+              <div class="material-option-bar" style="background:#78909C;"></div>
+
+            </div>
+
+            <!-- زجاج -->
+            <div class="material-option" data-value="0.92" data-name="زجاج" data-image="src\assets\materials\Glass.png">
+
+              <img src="src\assets\materials\Glass.png" class="material-option-img" alt="زجاج">
+
+              <div class="material-option-info">
+                <span class="material-option-name">زجاج</span>
+                <span class="material-option-value">ارتداد: 0.92</span>
+              </div>
+
+              <div class="material-option-bar" style="background:#4FC3F7;"></div>
+
+            </div>
+
+            <!-- مطاط -->
+            <div class="material-option" data-value="0.80" data-name="مطاط"
+              data-image="src\assets\materials\Rubber.png">
+
+              <img src="src\assets\materials\Rubber.png" class="material-option-img" alt="مطاط">
+
+              <div class="material-option-info">
+                <span class="material-option-name">مطاط</span>
+                <span class="material-option-value">ارتداد: 0.80</span>
+              </div>
+
+              <div class="material-option-bar" style="background:#333333;"></div>
+
+            </div>
+
+            <!-- خشب -->
+            <div class="material-option" data-value="0.50" data-name="خشب" data-image="src\assets\materials\Wood.png">
+
+              <img src="src\assets\materials\Wood.png" class="material-option-img" alt="خشب">
+
+              <div class="material-option-info">
+                <span class="material-option-name">خشب</span>
+                <span class="material-option-value">ارتداد: 0.50</span>
+              </div>
+
+              <div class="material-option-bar" style="background:#8D6E63;"></div>
+
+            </div>
+
+            <!-- مخصص -->
+            <div class="material-option" data-value="custom" data-name="مخصص"
+              data-image="src\assets\materials\settings-icon-png.png">
+
+              <img src="src\assets\materials\settings-icon-png.png" class="material-option-img" alt="مخصص">
+
+              <div class="material-option-info">
+                <span class="material-option-name">مخصص</span>
+                <span class="material-option-value">تعيين يدوي</span>
+              </div>
+
+              <div class="material-option-bar" style="background:#E94560;"></div>
+
+            </div>
+
+          </div>
+
         </div>
 
-      </div>
-
-      <span class="material-arrow">▼</span>
-
-    </div>
-
-    <!-- القائمة -->
-    <div class="material-options" id="material-options">
-
-      <!-- فولاذ -->
-      <div
-        class="material-option selected"
-        data-value="0.98"
-        data-name="فولاذ"
-        data-image="src\assets\materials\Steel.png">
-
-        <img
-          src="src\assets\materials\Steel.png"
-          class="material-option-img"
-          alt="فولاذ">
-
-        <div class="material-option-info">
-          <span class="material-option-name">فولاذ</span>
-          <span class="material-option-value">ارتداد: 0.98</span>
-        </div>
-
-        <div class="material-option-bar" style="background:#78909C;"></div>
+        <!-- القائمة الأصلية المخفية -->
+        <select id="materialSelect" style="display:none;">
+          <option value="0.98" selected>فولاذ</option>
+          <option value="0.92">زجاج</option>
+          <option value="0.80">مطاط</option>
+          <option value="0.50">خشب</option>
+          <option value="custom">مخصص</option>
+        </select>
 
       </div>
-
-      <!-- زجاج -->
-      <div
-        class="material-option"
-        data-value="0.92"
-        data-name="زجاج"
-        data-image="src\assets\materials\Glass.png">
-
-        <img
-          src="src\assets\materials\Glass.png"
-          class="material-option-img"
-          alt="زجاج">
-
-        <div class="material-option-info">
-          <span class="material-option-name">زجاج</span>
-          <span class="material-option-value">ارتداد: 0.92</span>
-        </div>
-
-        <div class="material-option-bar" style="background:#4FC3F7;"></div>
-
-      </div>
-
-      <!-- مطاط -->
-      <div
-        class="material-option"
-        data-value="0.80"
-        data-name="مطاط"
-        data-image="src\assets\materials\Rubber.png">
-
-        <img
-          src="src\assets\materials\Rubber.png"
-          class="material-option-img"
-          alt="مطاط">
-
-        <div class="material-option-info">
-          <span class="material-option-name">مطاط</span>
-          <span class="material-option-value">ارتداد: 0.80</span>
-        </div>
-
-        <div class="material-option-bar" style="background:#333333;"></div>
-
-      </div>
-
-      <!-- خشب -->
-      <div
-        class="material-option"
-        data-value="0.50"
-        data-name="خشب"
-        data-image="src\assets\materials\Wood.png">
-
-        <img
-          src="src\assets\materials\Wood.png"
-          class="material-option-img"
-          alt="خشب">
-
-        <div class="material-option-info">
-          <span class="material-option-name">خشب</span>
-          <span class="material-option-value">ارتداد: 0.50</span>
-        </div>
-
-        <div class="material-option-bar" style="background:#8D6E63;"></div>
-
-      </div>
-
-      <!-- مخصص -->
-      <div
-        class="material-option"
-        data-value="custom"
-        data-name="مخصص"
-        data-image="src\assets\materials\settings-icon-png.png">
-
-        <img
-          src="src\assets\materials\settings-icon-png.png"
-          class="material-option-img"
-          alt="مخصص">
-
-        <div class="material-option-info">
-          <span class="material-option-name">مخصص</span>
-          <span class="material-option-value">تعيين يدوي</span>
-        </div>
-
-        <div class="material-option-bar" style="background:#E94560;"></div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-  <!-- القائمة الأصلية المخفية -->
-  <select id="materialSelect" style="display:none;">
-    <option value="0.98" selected>فولاذ</option>
-    <option value="0.92">زجاج</option>
-    <option value="0.80">مطاط</option>
-    <option value="0.50">خشب</option>
-    <option value="custom">مخصص</option>
-  </select>
-
-</div>
       <!-- 📊 معامل الارتداد -->
       <div class="group" id="customRestitutionGroup" style="display: none;">
         <label>📊 معامل الارتداد الدقيق: <span id="restitutionValue">0.980</span></label>
@@ -390,8 +356,9 @@
       <button class="apply" id="applyBtn" type="button">✓ تطبيق التغييرات</button>
       <button class="reset" id="resetBtn" type="button">🔄 إعادة ضبط</button>
     </div>
-  </div>  <!-- ← إغلاق controlPanel هنا فقط! -->
+  </div> <!-- ← إغلاق controlPanel هنا فقط! -->
 
   <script type="module" src="./main.js"></script>
 </body>
+
 </html>
