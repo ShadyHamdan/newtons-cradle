@@ -1,29 +1,38 @@
+import * as THREE from 'three';
 import { BALL_COUNT } from './Constants.js';
 import { settings } from '../config/SimulationConfig.js';
 import { updatePendulumTransform } from './PendulumDynamics.js';
 
 /**
- * دالة مساعدة لإعادة تعيين واستقامة عقد الحبل لتمتد بدقة من السقف وحتى مركز الكرة تماماً
+ * دالة مساعدة لمزامنة عقد الحبل مع وضع الكرة الحالي بعد تطبيق الإطلاق
  */
-function resetRopeNodesToCenter(pendulum) {
+function syncRopeNodesToLaunchPose(pendulum) {
     if (!pendulum.ropesPhysics || !Array.isArray(pendulum.ropesPhysics)) return;
+
+    const ballWorldPos = new THREE.Vector3();
+    pendulum.ball?.getWorldPosition(ballWorldPos);
 
     pendulum.ropesPhysics.forEach((rope) => {
         if (!rope || !rope.nodes) return;
 
         const numNodes = rope.nodes.length;
         const start = rope.startPoint;
-        
-        // التطوير الجوهري: الخيط ينتهي عند إحداثيات مركز الكرة الفعلي في وضع السكون العمودي
-        const endX = pendulum.pivotX;
-        const endY = pendulum.pivotY - pendulum.individualLength; // الطول الكامل (L) صافي بدون خصم نصف القطر
-        const endZ = start.z; // الحفاظ على عمق الـ V-Shape للبندول المزدوج
+
+        const ropeDir = new THREE.Vector3().subVectors(ballWorldPos, start);
+        const totalDist = ropeDir.length();
+        if (totalDist <= 0.0001) return;
+
+        // طول الحبل الفيزيائي ينتهي عند سطح الكرة، لا عند مركزها
+        const targetRopeLength = Math.max(totalDist - 0.5, 0.001);
+        const surfacePoint = new THREE.Vector3()
+            .copy(start)
+            .addScaledVector(ropeDir.normalize(), targetRopeLength);
 
         for (let i = 0; i < numNodes; i++) {
             const ratio = i / (numNodes - 1);
-            const targetX = start.x + (endX - start.x) * ratio;
-            const targetY = start.y + (endY - start.y) * ratio;
-            const targetZ = start.z + (endZ - start.z) * ratio;
+            const targetX = start.x + (surfacePoint.x - start.x) * ratio;
+            const targetY = start.y + (surfacePoint.y - start.y) * ratio;
+            const targetZ = start.z + (surfacePoint.z - start.z) * ratio;
 
             // إجبار العقد على الاستقامة التامة الممتدة للمركز
             rope.nodes[i].position.x = targetX;
@@ -34,6 +43,17 @@ function resetRopeNodesToCenter(pendulum) {
             rope.nodes[i].oldPosition.x = targetX;
             rope.nodes[i].oldPosition.y = targetY;
             rope.nodes[i].oldPosition.z = targetZ;
+        }
+
+        rope.ropeLength = targetRopeLength;
+        rope.restLength = targetRopeLength / (numNodes - 1);
+
+        for (let i = 0; i < rope.constraints.length; i++) {
+            rope.constraints[i].length = rope.restLength;
+        }
+
+        for (let i = 0; i < rope.bendConstraints.length; i++) {
+            rope.bendConstraints[i].length = rope.restLength * 2;
         }
     });
 }
@@ -70,7 +90,7 @@ export function applyLaunchConfiguration(pendulums) {
     // تحديث تحويلات الكرات وبناء استقامة الحبال للمركز فوراً طبقاً لزوايا الإطلاق
     for (const p of pendulums) {
         updatePendulumTransform(p);
-        resetRopeNodesToCenter(p);
+        syncRopeNodesToLaunchPose(p);
     }
 }
 
@@ -91,8 +111,8 @@ export function resetPhysicsSimulation(pendulums) {
         // تنظيف الاستدعاء القديم لـ updateWires لعدم تشتيت المحرك الفيزيائي الجديد
         updatePendulumTransform(pendulum);
         
-        // إعادة فرد الخيوط فيزيائياً لتمتد رأسياً لمركز الكرات
-        resetRopeNodesToCenter(pendulum);
+        // إعادة فرد الخيوط فيزيائياً لتتبع وضع الكرة الحالي بدقة
+        syncRopeNodesToLaunchPose(pendulum);
     });
 
     console.log('🔄 تم تصفير المحرك الفيزيائي بنجاح، واستقامت الحبال ميكانيكياً حتى مركز الكرات.');

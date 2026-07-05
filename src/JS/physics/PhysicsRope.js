@@ -389,6 +389,10 @@ export class PhysicsRope {
             this.nodes[0].position.x = currentStartPos.x;
             this.nodes[0].position.y = currentStartPos.y;
             this.nodes[0].position.z = currentStartPos.z;
+            this.nodes[0].oldPosition.x = currentStartPos.x;
+            this.nodes[0].oldPosition.y = currentStartPos.y;
+            this.nodes[0].oldPosition.z = currentStartPos.z;
+            this.nodes[0].isPinned = true;
         }
 
         const endNode = this.getEndNode();
@@ -396,6 +400,10 @@ export class PhysicsRope {
             endNode.position.x = currentEndPos.x;
             endNode.position.y = currentEndPos.y;
             endNode.position.z = currentEndPos.z;
+            endNode.oldPosition.x = currentEndPos.x;
+            endNode.oldPosition.y = currentEndPos.y;
+            endNode.oldPosition.z = currentEndPos.z;
+            endNode.isPinned = true;
         }
 
         for (let i = 0; i < this.constraints.length; i++) {

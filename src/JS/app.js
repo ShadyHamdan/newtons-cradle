@@ -178,9 +178,6 @@ export function initApp() {
 
     animate();
 
-    // =======================================================
-    // مستمعو الأحداث: السحب الحر والشامل بالماوس في كافة المحاور
-    // =======================================================
     window.addEventListener('pointerdown', (event) => {
         if (event.target.closest('.launch-panel') || event.target.closest('#controlPanel') || event.target.closest('#control-panel')) return;
 
@@ -201,32 +198,26 @@ export function initApp() {
 
         selectedPendulums = [];
 
-        // *** الإصلاح الجوهري لمشكلة "لا تستجيب سوى الكرات على الأجناب" ***
-        // الكود القديم كان يتجاهل الكرة التي ضغط عليها المستخدم فعلياً (clickedBall) تماماً،
-        // ويقوم دائماً باختيار مجموعة من إحدى الجهتين (0..launchCount-1) أو (الآخر..نهاية)
-        // بناءً فقط على كون الفهرس المنقور أقل أو أكبر من المنتصف. لذلك أي نقر على كرة
-        // داخلية (غير طرفية) كان يُسقط تحديد كرة أخرى (الطرفية) بدلاً منها فيبدو وكأنها لا تستجيب.
-        //
-        // الإصلاح: نطبّق سلوك "تحديد عدة كرات من الطرف" (لدعم خاصية إطلاق عدة كرات معاً)
-        // فقط عندما تكون الكرة المنقورة نفسها ضمن نطاق ذلك الطرف. أما أي نقر على كرة أخرى
-        // (بما فيها الكرات الداخلية) فيقوم بتحديد تلك الكرة بالتحديد وحدها للسحب الحر.
-        const isWithinLeftEdgeGroup = launchCount > 1 && clickedIdx < launchCount;
-        const isWithinRightEdgeGroup = launchCount > 1 && clickedIdx >= BALL_COUNT - launchCount;
-
-        if (isWithinLeftEdgeGroup) {
-            for (let i = 0; i < launchCount; i++) { if (pendulums[i]) selectedPendulums.push(pendulums[i]); }
-        } else if (isWithinRightEdgeGroup) {
-            for (let i = 0; i < launchCount; i++) { const idx = BALL_COUNT - 1 - i; if (pendulums[idx]) selectedPendulums.push(pendulums[idx]); }
-        } else if (pendulums[clickedIdx]) {
-            selectedPendulums.push(pendulums[clickedIdx]);
+        if (clickedIdx < BALL_COUNT / 2) {
+            for (let i = 0; i < launchCount; i++) {
+                if (pendulums[i]) selectedPendulums.push(pendulums[i]);
+            }
+        } else {
+            for (let i = 0; i < launchCount; i++) {
+                const idx = BALL_COUNT - 1 - i;
+                if (pendulums[idx]) selectedPendulums.push(pendulums[idx]);
+            }
         }
 
-        selectedPendulums.forEach(p => { p.isDragging = true; });
-
-        const cameraDirection = new THREE.Vector3();
-        camera.getWorldDirection(cameraDirection);
-        cameraDirection.negate();
-        dragPlane.setFromNormalAndCoplanarPoint(cameraDirection, hits[0].point);
+        const refBall = selectedPendulums[0];
+        if (settings.enableZDrag) {
+            dragPlane.setFromNormalAndCoplanarPoint(
+                new THREE.Vector3(0, 1, 0),
+                new THREE.Vector3(0, PIVOT_Y - refBall.individualLength, 0)
+            );
+        } else {
+            dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 0));
+        }
     });
 
     window.addEventListener('pointermove', (event) => {
@@ -239,43 +230,53 @@ export function initApp() {
 
         if (raycaster.ray.intersectPlane(dragPlane, intersectionPoint)) {
             const referencePendulum = selectedPendulums[0];
-            // رفع الحد الأقصى للزاوية من 85° إلى 89° لمنح المستخدم حرية أكبر في رفع الكرة
-            // لأعلى ارتفاع ممكن قبل إفلاتها (شبه أفقي بمحاذاة نقطة التعليق)، مع البقاء
-            // أقل قليلاً من 90° تماماً لتفادي مشاكل رياضية (القسمة على صفر عبر cos(90°))
-            // في معادلات التصادم التي تعتمد على جيب التمام لحساب السرعات الخطية
-            const maxAngleRad = THREE.MathUtils.degToRad(89);
+            const maxAngleRad = THREE.MathUtils.degToRad(80);
 
-            const dx = intersectionPoint.x - referencePendulum.pivotX;
-            const dy = PIVOT_Y - intersectionPoint.y;
-            const dz = intersectionPoint.z - (referencePendulum.pivotZ || 0);
+            if (settings.enableZDrag) {
+                const dx = intersectionPoint.x - referencePendulum.pivotX;
+                const dz = intersectionPoint.z;
+                const dy = referencePendulum.individualLength;
 
-            let targetAngleX = Math.atan2(dx, dy);
-            let targetAngleZ = Math.atan2(dz, dy);
+                let targetAngleX = Math.atan2(dx, dy);
+                let targetAngleZ = Math.atan2(dz, dy);
+                targetAngleX = THREE.MathUtils.clamp(targetAngleX, -maxAngleRad, maxAngleRad);
+                targetAngleZ = THREE.MathUtils.clamp(targetAngleZ, -maxAngleRad, maxAngleRad);
 
-            if (!settings.enableZDrag) {
-                targetAngleZ = 0;
-            }
+                selectedPendulums.forEach(p => {
+                    p.angle = targetAngleX;
+                    p.angleZ = targetAngleZ;
+                    p.angularVelocity = 0;
+                    p.angularVelocityZ = 0;
+                    updatePendulumTransform(p);
+                });
 
-            targetAngleX = THREE.MathUtils.clamp(targetAngleX, -maxAngleRad, maxAngleRad);
-            targetAngleZ = THREE.MathUtils.clamp(targetAngleZ, -maxAngleRad, maxAngleRad);
+                if (UI.launchAngleInput && UI.launchAngleValue) {
+                    const angleInDegreesX = Math.abs(THREE.MathUtils.radToDeg(targetAngleX));
+                    UI.launchAngleInput.value = angleInDegreesX.toFixed(0);
+                    UI.launchAngleValue.textContent = angleInDegreesX.toFixed(0);
+                }
+                if (UI.launchAngleZInput && UI.launchAngleZValue) {
+                    const angleInDegreesZ = Math.abs(THREE.MathUtils.radToDeg(targetAngleZ));
+                    UI.launchAngleZInput.value = angleInDegreesZ.toFixed(0);
+                    UI.launchAngleZValue.textContent = angleInDegreesZ.toFixed(0) + '°';
+                }
+            } else {
+                const dx = intersectionPoint.x - referencePendulum.pivotX;
+                const dy = intersectionPoint.y - PIVOT_Y;
+                let targetAngleX = Math.atan2(dx, -dy);
+                targetAngleX = THREE.MathUtils.clamp(targetAngleX, -maxAngleRad, maxAngleRad);
 
-            selectedPendulums.forEach(p => {
-                p.angle = targetAngleX;
-                p.angleZ = targetAngleZ;
-                p.angularVelocity = 0;
-                p.angularVelocityZ = 0;
-                updatePendulumTransform(p);
-            });
+                selectedPendulums.forEach(p => {
+                    p.angle = targetAngleX;
+                    p.angularVelocity = 0;
+                    updatePendulumTransform(p);
+                });
 
-            if (UI.launchAngleInput && UI.launchAngleValue) {
-                const angleInDegreesX = THREE.MathUtils.radToDeg(targetAngleX);
-                UI.launchAngleInput.value = Math.abs(angleInDegreesX).toFixed(0);
-                UI.launchAngleValue.textContent = Math.abs(angleInDegreesX).toFixed(0);
-            }
-            if (UI.launchAngleZInput && UI.launchAngleZValue) {
-                const angleInDegreesZ = THREE.MathUtils.radToDeg(targetAngleZ);
-                UI.launchAngleZInput.value = angleInDegreesZ.toFixed(0);
-                UI.launchAngleZValue.textContent = angleInDegreesZ.toFixed(0) + '°';
+                if (UI.launchAngleInput && UI.launchAngleValue) {
+                    const angleInDegrees = Math.abs(THREE.MathUtils.radToDeg(targetAngleX));
+                    UI.launchAngleInput.value = angleInDegrees.toFixed(0);
+                    UI.launchAngleValue.textContent = angleInDegrees.toFixed(0);
+                }
             }
         }
     });
@@ -285,7 +286,6 @@ export function initApp() {
             isDragging = false;
             controls.enabled = true;
             selectedPendulums.forEach(p => {
-                p.isDragging = false;
                 p.angularVelocity = 0;
                 p.angularVelocityZ = 0;
             });
