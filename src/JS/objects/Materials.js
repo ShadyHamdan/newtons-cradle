@@ -24,7 +24,7 @@ function createCanvasTexture(pattern, colors) {
             ctx.beginPath();
             ctx.moveTo(i, 0);
             ctx.lineTo(i + 180, canvas.height);
-            ctx.stroke();
+            ctx.stroke(); 
         }
     } else if (pattern === 'glass') {
         const gradient = ctx.createRadialGradient(canvas.width * 0.3, canvas.height * 0.25, 40, canvas.width * 0.5, canvas.height * 0.5, canvas.width * 0.7);

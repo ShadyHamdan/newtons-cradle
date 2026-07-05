@@ -24,6 +24,7 @@ export const UIElements = {
     enableZDrag: document.getElementById('enableZDrag'),
     singleSideBtn: document.getElementById('singleSideBtn'),
     doubleSideBtn: document.getElementById('doubleSideBtn'),
+    customModeBtn: document.getElementById('customModeBtn'),
     soundToggle: document.getElementById('soundToggle'),
     applyBtn: document.getElementById('applyBtn'),
     resetBtn: document.getElementById('resetBtn'),

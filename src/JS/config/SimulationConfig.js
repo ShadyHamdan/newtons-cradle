@@ -9,6 +9,7 @@ export const settings = {
     launchAngleZ: 0,
     launchCount: 1,
     launchMode: 'single',
+    interactionMode: 'group',
     sound: true,
     enableZDrag: false,
 };

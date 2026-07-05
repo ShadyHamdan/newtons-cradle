@@ -198,7 +198,11 @@ export function initApp() {
 
         selectedPendulums = [];
 
-        if (clickedIdx < BALL_COUNT / 2) {
+        if (settings.interactionMode === 'custom') {
+            if (clickedIdx >= 0 && pendulums[clickedIdx]) {
+                selectedPendulums.push(pendulums[clickedIdx]);
+            }
+        } else if (clickedIdx < BALL_COUNT / 2) {
             for (let i = 0; i < launchCount; i++) {
                 if (pendulums[i]) selectedPendulums.push(pendulums[i]);
             }

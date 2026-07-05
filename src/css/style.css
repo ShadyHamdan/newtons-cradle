@@ -61,7 +61,7 @@ body {
 
 .mode-buttons {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     margin-bottom: 16px;
 }
@@ -261,6 +261,10 @@ canvas {
         left: 10px;
         top: auto;
         bottom: 10px;
+    }
+
+    .mode-buttons {
+      grid-template-columns: 1fr;
     }
 }
 

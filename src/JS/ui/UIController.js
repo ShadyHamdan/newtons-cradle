@@ -62,7 +62,12 @@ export function setupUI(pendulums) {
         settings.restitution = parseFloat(UI.restitutionInput.value);
         settings.launchCount = parseInt(UI.launchCountInput.value);
         settings.launchAngle = THREE.MathUtils.degToRad(parseFloat(UI.launchAngleInput.value));
-        settings.launchMode = UI.singleSideBtn.classList.contains('active') ? 'single' : 'double';
+        if (UI.customModeBtn?.classList.contains('active')) {
+            settings.interactionMode = 'custom';
+        } else {
+            settings.launchMode = UI.singleSideBtn.classList.contains('active') ? 'single' : 'double';
+            settings.interactionMode = 'group';
+        }
         settings.sound = UI.soundToggle.checked;
 
 // 🆕 نتحقق أولًا: هل كل الكرات من نفس المادة (نفس restitution)؟
@@ -109,6 +114,7 @@ export function setupUI(pendulums) {
 
         if (UI.singleSideBtn) UI.singleSideBtn.classList.add('active');
         if (UI.doubleSideBtn) UI.doubleSideBtn.classList.remove('active');
+        if (UI.customModeBtn) UI.customModeBtn.classList.remove('active');
         if (UI.planetSelect) UI.planetSelect.value = 'earth';
         if (UI.gravityInput) UI.gravityInput.value = 9.81;
         if (UI.gravityValue) UI.gravityValue.textContent = '9.81';
@@ -148,6 +154,7 @@ export function setupUI(pendulums) {
         settings.launchAngle = THREE.MathUtils.degToRad(45);
         settings.launchAngleZ = 0;
         settings.launchMode = 'single';
+        settings.interactionMode = 'group';
         settings.sound = true;
         settings.enableZDrag = false;
 
